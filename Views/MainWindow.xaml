@@ -1,0 +1,189 @@
+﻿<Window x:Class="RCP_Drawings_Releaser.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:RCP_Drawings_Releaser"
+        xmlns:viewmodels="clr-namespace:RCP_Drawings_Releaser.ViewModels"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="650" Width="900">
+    <Window.Resources>
+        <viewmodels:MainWindowVM x:Key="MainVm"/>
+
+        <Style x:Key="GridCells" TargetType="DataGridCell">
+            <Setter Property="Foreground" Value="#FF00005F"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="BorderThickness" Value="0"/>
+
+        </Style>
+
+        <Style x:Key="GridHeaders" TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="#47FFFFFF"/>
+        </Style>
+
+        <Style x:Key="DrawingsTable" TargetType="DataGrid">
+            <Setter Property="AllowDrop" Value="True"/>
+            <Setter Property="CanUserSortColumns" Value="True"/>
+            <Setter Property="CanUserDeleteRows" Value="True"/>
+            <Setter Property="AutoGenerateColumns" Value="False"/>
+            <Setter Property="ColumnHeaderHeight" Value="30"/>
+            <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
+            <Setter Property="CanUserAddRows" Value="False"/>
+            <Setter Property="CanUserReorderColumns" Value="True"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="RowHeaderWidth" Value="0"/>
+            <Setter Property="CellStyle" Value="{StaticResource GridCells}"/>
+            <Setter Property="RowBackground">
+                <Setter.Value>
+                    <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                        <GradientStop Color="Transparent" Offset="0"/>
+                        <GradientStop Color="Transparent" Offset="1"/>
+                        <GradientStop Color="#AAFFFFFF" Offset="0.071"/>
+                        <GradientStop Color="#AAFFFFFF" Offset="0.933"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="ColumnHeaderStyle" Value="{StaticResource GridHeaders}"/>
+
+        </Style>
+
+    </Window.Resources>
+    <Grid x:Name="MainGrid" DataContext="{StaticResource MainVm}">
+        <Grid.Background>
+            <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                <GradientStop Color="#FFE7FFE5" Offset="0"/>
+                <GradientStop Color="#FFD3F9FF" Offset="1"/>
+                <GradientStop Color="#FF77FF69" Offset="0.364"/>
+                <GradientStop Color="#FF00DCFF" Offset="0.751"/>
+            </LinearGradientBrush>
+        </Grid.Background>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="10"/>
+            <RowDefinition Height="50"/>
+            <RowDefinition Height="20"/>
+            <RowDefinition Height="8*"/>
+            <RowDefinition Height="20"/>
+            <RowDefinition Height="7*"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="4*"/>
+            <ColumnDefinition Width="5"/>
+            <ColumnDefinition Width="4*"/>
+            <ColumnDefinition Width="5"/>
+            <ColumnDefinition Width="2*"/>
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Text="Новые чертежи:"
+                   Grid.Column="0"
+                   Grid.Row="2"
+                   VerticalAlignment="Bottom"
+                   HorizontalAlignment="Center"/>
+
+        <DataGrid x:Name="NewDrawingsGrid"
+                  Style="{StaticResource DrawingsTable}"
+                  Grid.Row="3"
+                  Grid.Column="0"
+                  DragDrop.Drop="drawings_Drop"
+                  ItemsSource="{Binding NewDrawings}" 
+                  Background="#7F77FF69" 
+                  BorderBrush="#FF0E9500"
+                  BorderThickness="2"
+                  >
+            <DataGrid.Columns>
+                <DataGridTextColumn 
+                    Header="Имя" 
+                    Binding="{Binding Name}"
+                    IsReadOnly="True"
+                    Width="7*"/>
+                <DataGridTextColumn 
+                    Header="Тип" 
+                    Binding="{Binding Extension}"
+                    IsReadOnly="True"
+                    Width="*"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <TextBlock Text="Старые чертежи:"
+                   Grid.Column="0"
+                   Grid.Row="4"
+                   VerticalAlignment="Bottom"
+                   HorizontalAlignment="Center"/>
+
+        <DataGrid x:Name="OldDrawingsGrid"
+                  Style="{StaticResource DrawingsTable}"
+                  Grid.Row="5" 
+                  Grid.RowSpan="2"
+                  Grid.Column="0" 
+                  DragDrop.Drop="drawings_Drop"
+                  ItemsSource="{Binding OldDrawings}" 
+                  Background="#7F00DCFF" 
+                  BorderBrush="#FF00788B"
+                  BorderThickness="2">
+            <DataGrid.Columns>
+                <DataGridTextColumn 
+                    Header="Имя" 
+                    Binding="{Binding Name}"
+                    IsReadOnly="True"
+                    Width="7*"/>
+                <DataGridTextColumn 
+                    Header="Тип" 
+                    Binding="{Binding Extension}"
+                    IsReadOnly="True"
+                    Width="*"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <GridSplitter 
+            Grid.Column="1" 
+            Grid.Row="0"
+            Grid.RowSpan="7"
+            ResizeDirection="Columns" 
+            ResizeBehavior="PreviousAndNext" 
+            Width="5"
+            Background="Transparent"/>
+
+        <ListView
+            x:Name="FilesToCombine"
+            Grid.Row="3"
+            Grid.Column="2"
+            Grid.RowSpan="3"
+            Margin="2" Background="#FCFFF0D5"
+            BorderBrush="Red"
+            BorderThickness="2"
+            
+            />
+        
+        <GridSplitter 
+            Grid.Column="3" 
+            Grid.Row="0"
+            Grid.RowSpan="6"
+            ResizeDirection="Columns" 
+            ResizeBehavior="PreviousAndNext" 
+            Width="5"
+            Background="Transparent"/>
+
+        <Button 
+            Click="Button_Click" 
+            Grid.Row="6" 
+            Grid.Column="2" 
+            Grid.ColumnSpan="3"
+            />
+
+        <ListBox
+            Grid.Row="1"
+            Grid.Column="0"
+            Background="Transparent"
+            Margin="2"
+            BorderBrush="#FF0E9500"
+            BorderThickness="2" VerticalAlignment="Stretch">
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Vertical"/>
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <Button VerticalAlignment="Stretch" Content="fdsf" Click="ButtonBase_OnClick"/>
+        </ListBox>
+    </Grid>
+</Window>
