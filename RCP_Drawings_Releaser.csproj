@@ -62,6 +62,8 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Converters\RevNumToColorConverter.cs" />
+    <Compile Include="Converters\SheetNumToColorConverter.cs" />
     <Compile Include="Logic\PDFLogic.cs" />
     <Compile Include="Logic\StringLogic.cs" />
     <Page Include="Views\MainWindow.xaml">

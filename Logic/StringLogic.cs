@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 
@@ -16,48 +17,83 @@ namespace RCP_Drawings_Releaser
         {
             public string[] Fields { get; set; }
             public bool IsDrawing { get; set; }
-            public string DrawingName { get; set; }
-            public int SheetNumber { get; set; }
-            public int Rev { get; set; }
-
         }
-        
+
         private class FieldColumn
         {
             public int Num { get; set; }
             public List<string> Fields { get; set; }
-            public bool ProbablyNumber { get; set; }
             public bool IsConst { get; set; }
             public string ConstValue { get; set; }
             public double HomogenityPercentage { get; set; }
             public bool IsNumber { get; set; }
-
+            public bool IsSheetNum { get; set; }
+            public bool IsRevNum { get; set; }
             public FieldColumn()
             {
                 Num = 0;
                 Fields = new List<string>();
-                ProbablyNumber = false;
                 IsConst = false;
                 ConstValue = "";
                 HomogenityPercentage = 0.0;
                 IsNumber = false;
+                IsSheetNum = false;
+                IsRevNum = false;
+            }
+        }
+        
+        public class ResultField
+        {
+            public string Value { get; set; }
+            public bool IsSheetNum { get; set; }
+            public bool IsRevNum { get; set; }
+
+            public string[] AllValues { get; set; }
+
+            public ResultField()
+            {
+                Value = "xx";
+                IsRevNum = false;
+                IsSheetNum = false;
+                AllValues = new string[]{};
             }
         }
 
         private static List<FileString> PdfsAndDwgs = new List<FileString>();
         private static List<FieldColumn> LeftColumns = new List<FieldColumn>();
         private static List<FieldColumn> RightColumns = new List<FieldColumn>();
-
-        public static void AnalyzeData(List<string> fileNames, Side sheetNumSide, Side revNumSide)
+        public static List<ResultField> AnalyzeResults = new List<ResultField>();
+        
+        
+        
+        public static List<ResultField> AnalyzeData(List<string> fileNames)
         {
             FlushData();
             CreateFieldsFromFileNames(fileNames);
             CreateFieldColumns(Side.Left);
             CreateFieldColumns(Side.Right);
-            FindSheetNumber(sheetNumSide == Side.Left ? LeftColumns : RightColumns);
-            FindRev(revNumSide == Side.Left ? LeftColumns : RightColumns);
+            FindSheetNumber();
+            FindRev(RightColumns);
+            PrepareResults();
+            return AnalyzeResults;
+        }
 
-            
+        private static void PrepareResults()
+        {
+            foreach (var column in LeftColumns.Concat(Enumerable.Reverse(RightColumns).ToList()))
+            {
+                var thisFieldResult = new ResultField();
+
+                if (column.IsConst)
+                {
+                    thisFieldResult.Value = column.ConstValue;
+                }
+                thisFieldResult.IsSheetNum = column.IsSheetNum;
+                thisFieldResult.IsRevNum = column.IsRevNum;
+                thisFieldResult.AllValues = column.Fields.ToArray();
+                
+                AnalyzeResults.Add(thisFieldResult);
+            }
         }
 
         private static void FlushData()
@@ -65,6 +101,7 @@ namespace RCP_Drawings_Releaser
             PdfsAndDwgs.Clear();
             LeftColumns.Clear();
             RightColumns.Clear();
+            AnalyzeResults.Clear();
         }
         
         private static void CreateFieldsFromFileNames(List<string> fileNames)
@@ -73,12 +110,12 @@ namespace RCP_Drawings_Releaser
             {
                 var fileString = new FileString();
                 
-                char[] delimiters = {'.', ' '};
+                char[] delimiters = {'.', ' ', '-'};
                 
                 if (Path.GetExtension(fileName) == ".pdf" || Path.GetExtension(fileName) == ".dwg" )
                 {
                     fileString.IsDrawing = true;
-                    fileString.Fields = fileName.Split(delimiters);
+                    fileString.Fields = Path.GetFileNameWithoutExtension(fileName).Split(delimiters);
                     PdfsAndDwgs.Add(fileString);
                 }
                 else
@@ -118,7 +155,7 @@ namespace RCP_Drawings_Releaser
                 {
                     column.ConstValue = column.Fields[0];
                 }
-                column.ProbablyNumber = CheckIfNumber(column.Fields);
+                column.IsNumber = CheckIfNumber(column.Fields);
                 column.HomogenityPercentage = CalcHomogenity(column.Fields);
             }
         }
@@ -134,41 +171,54 @@ namespace RCP_Drawings_Releaser
 
             var percentage = ((double)numNumber / fieldList.Count());
             
-            return (percentage > 0.9) ? true : false;
+            return percentage > 0.9;
         }
 
         private static double CalcHomogenity(List<string> fieldList)
         {
             var values = fieldList.GroupBy(s => s).Select(g => new {Name = g.Key, Quantity = g.Count() });
             
-            return values.Select(value => (double) value.Quantity / (double) PdfsAndDwgs.Count).Prepend(0.0).Max();
+            return values.Select(value => (double) value.Quantity / PdfsAndDwgs.Count).Prepend(0.0).Max();
         }
 
-        private static int FindSheetNumber(List<FieldColumn> columns)
+        private static void FindSheetNumber()
         {
-            var _ = 100.0;
-            var i = 0;
-            foreach (var column in columns)
+            var columnHomogenityPercentage = 1.0;
+            var columnNum = 0;
+            var side = Side.Left;
+            foreach (var column in LeftColumns)
             {
-                if (column.HomogenityPercentage < _)
-                    _ = column.HomogenityPercentage;
-                i = column.Num;
+                if (column.HomogenityPercentage < columnHomogenityPercentage)
+                {
+                    columnHomogenityPercentage = column.HomogenityPercentage;
+                    columnNum = column.Num;
+                    side = Side.Left;
+                }
             }
-            return i;
+            foreach (var column in RightColumns)
+            {
+                if (column.HomogenityPercentage < columnHomogenityPercentage)
+                {
+                    columnHomogenityPercentage = column.HomogenityPercentage;
+                    columnNum = column.Num;
+                    side = Side.Right;
+                }
+            }
+            (side == Side.Left? LeftColumns : RightColumns)[columnNum].IsSheetNum = true;
         }
         
-        private static int? FindRev(List<FieldColumn> columns)
+        private static void FindRev(List<FieldColumn> columns)
         {
-            int? result = null;
-            foreach (var column in columns)
+            int? columnNum = null;
+            foreach (var column in columns.Where(column => column.IsNumber))
             {
-                if (column.IsNumber)
-                    result = column.Num;
-                else
-                    result = null;
+                columnNum = column.Num;
+            } 
+            
+            if (columnNum != null)
+            {
+                columns[(int) columnNum].IsRevNum = true;
             }
-
-            return result;
         }
     }
 }

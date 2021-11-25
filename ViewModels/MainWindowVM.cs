@@ -1,8 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Windows.Input;
 using RCP_Drawings_Releaser.Annotations;
 
 
@@ -21,11 +24,64 @@ namespace RCP_Drawings_Releaser.ViewModels
 
         #region Commands
         
+        public abstract class ButtonCommand : ICommand
+        {
+            public MainWindowVM VM;
+
+            public event EventHandler CanExecuteChanged
+            {
+                add => CommandManager.RequerySuggested += value;
+                remove => CommandManager.RequerySuggested -= value;
+            }
+
+            public bool CanExecute(object parameter)
+            {
+                var buttonsEnabled = true;
+                if (parameter != null)
+                {
+                    buttonsEnabled = (bool)parameter;
+                }
+
+                return buttonsEnabled;
+            }
+
+            public abstract void Execute(object parameter);
+
+            public ButtonCommand(MainWindowVM vm)
+            {
+                VM = vm;
+            }
+        }
         
         
+        public class AnalyzeCommand : ButtonCommand
+        {
+            public AnalyzeCommand(MainWindowVM vm) : base(vm) { }
+
+            public override void Execute(object parameter)
+            {
+                VM.FieldResults = new BindingList<StringLogic.ResultField>(StringLogic.AnalyzeData(
+                        VM.NewDrawings.Select(file => file.FullName).ToList().
+                            Concat(VM.OldDrawings.Select(file => file.FullName).ToList()).
+                            ToList())
+                        );
+            }
+        }
         #endregion
 
         #region Props
+
+        public AnalyzeCommand Analyze { get; set; }
+
+        public BindingList<StringLogic.ResultField> FieldResults
+        {
+            get => _fieldResults;
+            set
+            {
+                _fieldResults = value; 
+                OnPropertyChanged(nameof(FieldResults));
+            }
+        }
 
         private List<ImportedFile> _newDrawings;
 
@@ -40,6 +96,7 @@ namespace RCP_Drawings_Releaser.ViewModels
         }
 
         private List<ImportedFile> _oldDrawings;
+        private BindingList<StringLogic.ResultField> _fieldResults;
 
         public List<ImportedFile> OldDrawings
         {
@@ -66,8 +123,6 @@ namespace RCP_Drawings_Releaser.ViewModels
             var chosenTable = tableChooser[tableName];
 
             TableItemsFromDirectory(files, ref chosenTable);
-            
-            UpdateFileFields();
         }
 
         private ImportedFile TableItemFromFile(string file)
@@ -100,15 +155,7 @@ namespace RCP_Drawings_Releaser.ViewModels
             }
         }
 
-        private void UpdateFileFields()
-        {
-            var allFileNames = NewDrawings.Select(file => file.FullName).ToList();
-            allFileNames.AddRange(OldDrawings.Select(file => file.FullName));
-            
-            StringLogic.AnalyzeData(allFileNames, Side.Left, Side.Left);
-        }
-
-        #endregion
+        #endregion Methods
 
         #region Classes
 
@@ -156,6 +203,7 @@ namespace RCP_Drawings_Releaser.ViewModels
 
             #endregion
 
+            #region INotify
             public event PropertyChangedEventHandler PropertyChanged;
 
             [NotifyPropertyChangedInvocator]
@@ -163,6 +211,7 @@ namespace RCP_Drawings_Releaser.ViewModels
             {
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
             }
+            #endregion
         }
 
         #endregion
@@ -173,6 +222,8 @@ namespace RCP_Drawings_Releaser.ViewModels
         {
             NewDrawings = new List<ImportedFile>();
             OldDrawings = new List<ImportedFile>();
+            Analyze = new AnalyzeCommand(this);
+            FieldResults = new BindingList<StringLogic.ResultField>();
         }
 
         #endregion

@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:RCP_Drawings_Releaser"
+        xmlns:converters = "clr-namespace:RCP_Drawings_Releaser.Converters"
         xmlns:viewmodels="clr-namespace:RCP_Drawings_Releaser.ViewModels"
         mc:Ignorable="d"
         Title="MainWindow" Height="650" Width="900">
@@ -45,8 +45,9 @@
                 </Setter.Value>
             </Setter>
             <Setter Property="ColumnHeaderStyle" Value="{StaticResource GridHeaders}"/>
-
         </Style>
+        <converters:RevNumToColorConverter x:Key="RevNumToColorConverter"/>
+        <converters:SheetNumToColorConverter x:Key="SheetNumToColorConverter"/>
 
     </Window.Resources>
     <Grid x:Name="MainGrid" DataContext="{StaticResource MainVm}">
@@ -54,8 +55,8 @@
             <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                 <GradientStop Color="#FFE7FFE5" Offset="0"/>
                 <GradientStop Color="#FFD3F9FF" Offset="1"/>
-                <GradientStop Color="#FF77FF69" Offset="0.364"/>
-                <GradientStop Color="#FF00DCFF" Offset="0.751"/>
+                <GradientStop Color="#FFB5FFB0" Offset="0.364"/>
+                <GradientStop Color="#FFA6F2FF" Offset="0.751"/>
             </LinearGradientBrush>
         </Grid.Background>
         <Grid.RowDefinitions>
@@ -87,7 +88,7 @@
                   Grid.Column="0"
                   DragDrop.Drop="drawings_Drop"
                   ItemsSource="{Binding NewDrawings}" 
-                  Background="#7F77FF69" 
+                  Background="#7FB5FFB0" 
                   BorderBrush="#FF0E9500"
                   BorderThickness="2"
                   >
@@ -118,7 +119,7 @@
                   Grid.Column="0" 
                   DragDrop.Drop="drawings_Drop"
                   ItemsSource="{Binding OldDrawings}" 
-                  Background="#7F00DCFF" 
+                  Background="#7FA6F2FF" 
                   BorderBrush="#FF00788B"
                   BorderThickness="2">
             <DataGrid.Columns>
@@ -165,7 +166,6 @@
             Background="Transparent"/>
 
         <Button 
-            Click="Button_Click" 
             Grid.Row="6" 
             Grid.Column="2" 
             Grid.ColumnSpan="3"
@@ -177,13 +177,29 @@
             Background="Transparent"
             Margin="2"
             BorderBrush="#FF0E9500"
-            BorderThickness="2" VerticalAlignment="Stretch">
+            BorderThickness="2" VerticalAlignment="Stretch"
+            ItemsSource="{Binding Path=FieldResults}">
             <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>
-                    <WrapPanel Orientation="Vertical"/>
+                    <WrapPanel Orientation="Horizontal"/>
                 </ItemsPanelTemplate>
             </ListBox.ItemsPanel>
-            <Button VerticalAlignment="Stretch" Content="fdsf" Click="ButtonBase_OnClick"/>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock 
+                        Text="{Binding Value}"
+                        Background="{Binding Path=IsSheetNum, 
+                            Converter={StaticResource SheetNumToColorConverter} }">
+                        <TextBlock.ToolTip>
+                            <ListView ItemsSource="{Binding AllValues}"/>
+                        </TextBlock.ToolTip>
+                    </TextBlock>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
         </ListBox>
+        <Button Grid.Column="2" Grid.Row="1" VerticalAlignment="Stretch" 
+                Content="Analyze" 
+                Command="{Binding Analyze}"
+        />
     </Grid>
 </Window>

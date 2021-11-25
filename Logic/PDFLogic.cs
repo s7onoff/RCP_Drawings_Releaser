@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using PdfSharp;
+﻿using System.IO;
 using PdfSharp.Pdf;
 using PdfSharp.Pdf.IO;
 

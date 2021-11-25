@@ -1,5 +1,9 @@
-﻿using System.Windows;
+﻿using System;
+using System.Globalization;
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Media;
 
 namespace RCP_Drawings_Releaser.Views
 {
@@ -12,12 +16,7 @@ namespace RCP_Drawings_Releaser.Views
         {
             InitializeComponent();
         }
-
-        private void Button_Click(object sender, RoutedEventArgs e)
-        {
-            
-        }
-
+        
         private void drawings_Drop(object sender, DragEventArgs e)
         {
 
