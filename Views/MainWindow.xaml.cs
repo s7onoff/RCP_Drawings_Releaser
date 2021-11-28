@@ -16,7 +16,7 @@ namespace RCP_Drawings_Releaser.Views
         public MainWindow()
         {
             InitializeComponent();
-            ListNumSelectingEnabled = false;
+            SheetNumSelectingEnabled = false;
             RevNumSelectingEnabled = false;
         }
         
@@ -35,7 +35,7 @@ namespace RCP_Drawings_Releaser.Views
             }
         }
 
-        public bool ListNumSelectingEnabled { get; set; }
+        public bool SheetNumSelectingEnabled { get; set; }
         public bool RevNumSelectingEnabled { get; set; }
 
         
@@ -44,21 +44,21 @@ namespace RCP_Drawings_Releaser.Views
         {
             throw new System.NotImplementedException();
         }
-        private void ListNum_OnClick(object sender, RoutedEventArgs e)
+        private void SheetNum_OnClick(object sender, RoutedEventArgs e)
         {
             RevNumSelectingEnabled = false;
-            ListNumSelectingEnabled = true;
+            SheetNumSelectingEnabled = true;
         }
 
         private void RevNum_OnClick(object sender, RoutedEventArgs e)
         {
-            ListNumSelectingEnabled = false;
+            SheetNumSelectingEnabled = false;
             RevNumSelectingEnabled = true;
         }
 
         private void EventSetter_OnHandler(object sender, RoutedEventArgs e)
         {
-            if (ListNumSelectingEnabled)
+            if (SheetNumSelectingEnabled)
             {
                 var vm = (ViewModels.MainWindowVM)MainGrid.DataContext;
                 var resultField = (ViewModels.MainWindowVM.ResultField)((ListBoxItem)sender).Content;
@@ -68,7 +68,7 @@ namespace RCP_Drawings_Releaser.Views
                 MainGrid.UpdateLayout();
             }
             
-            ListNumSelectingEnabled = false;
+            SheetNumSelectingEnabled = false;
             RevNumSelectingEnabled = false;
         }
     }

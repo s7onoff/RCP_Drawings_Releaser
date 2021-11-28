@@ -261,9 +261,9 @@
                     BorderBrush="#FF0E9500"
                     BorderThickness="2"
                     AllowDrop="True"
-                    Click="ListNum_OnClick"
+                    Click="SheetNum_OnClick"
                     >
-                <TextBlock Text="List"
+                <TextBlock Text="Sheet"
                            Foreground="DarkGreen"
                            FontWeight="Bold"/>
             </Button>
