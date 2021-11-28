@@ -5,6 +5,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Windows.Controls;
 using System.Windows.Input;
 using RCP_Drawings_Releaser.Annotations;
 
@@ -60,20 +61,49 @@ namespace RCP_Drawings_Releaser.ViewModels
 
             public override void Execute(object parameter)
             {
-                VM.FieldResults = new BindingList<StringLogic.ResultField>(StringLogic.AnalyzeData(
+                VM.FieldResults.Clear();
+                var results = new List<StringLogic.FieldColumn>(StringLogic.AnalyzeData(
                         VM.NewDrawings.Select(file => file.FullName).ToList().
                             Concat(VM.OldDrawings.Select(file => file.FullName).ToList()).
                             ToList())
                         );
+                for (var index = 0; index < results.Count; index++)
+                {
+                    var column = results[index];
+                    var thisFieldResult = new ResultField();
+
+                    if (index > 0 && column.ColumnSide == Side.Right && results[index - 1].ColumnSide == Side.Left)
+                    {
+                        VM.FieldResults.Add(new ResultField()
+                        {
+                            Value = "<....>"
+                        });
+                    }
+                    
+                    if (column.IsConst)
+                    {
+                        thisFieldResult.Value = column.ConstValue;
+                    }
+
+                    thisFieldResult.IsSheetNum = column.IsSheetNum;
+                    thisFieldResult.IsRevNum = column.IsRevNum;
+                    thisFieldResult.AllValues = column.Fields.ToArray();
+                    thisFieldResult.ResultSide = column.ColumnSide;
+                    thisFieldResult.Num = column.Num;
+
+                    VM.FieldResults.Add(thisFieldResult);
+                }
             }
         }
+        
         #endregion
 
         #region Props
-
+        
         public AnalyzeCommand Analyze { get; set; }
-
-        public BindingList<StringLogic.ResultField> FieldResults
+        
+        private BindingList<ResultField> _fieldResults;
+        public BindingList<ResultField> FieldResults
         {
             get => _fieldResults;
             set
@@ -84,7 +114,6 @@ namespace RCP_Drawings_Releaser.ViewModels
         }
 
         private List<ImportedFile> _newDrawings;
-
         public List<ImportedFile> NewDrawings
         {
             get => _newDrawings;
@@ -96,8 +125,6 @@ namespace RCP_Drawings_Releaser.ViewModels
         }
 
         private List<ImportedFile> _oldDrawings;
-        private BindingList<StringLogic.ResultField> _fieldResults;
-
         public List<ImportedFile> OldDrawings
         {
             get => _oldDrawings;
@@ -150,15 +177,49 @@ namespace RCP_Drawings_Releaser.ViewModels
                 }
                 else if (Directory.Exists(item))
                 {
-                    TableItemsFromDirectory(Directory.GetFiles(item), ref drawingsList);
+                    TableItemsFromDirectory(Directory.GetFiles(item).Concat(Directory.GetDirectories(item)).ToArray(), ref drawingsList);
                 }
             }
+        }
+        
+        public void ChangeListNumField(ResultField newListField)
+        {
+            foreach (var field in FieldResults)
+            {
+                field.IsSheetNum = false;
+            }
+            newListField.IsSheetNum = true;
+            OnPropertyChanged(nameof(FieldResults));
+            //todo:not working update of converter binding:
+            OnPropertyChanged(nameof(newListField));
+            OnPropertyChanged(nameof(newListField.IsSheetNum));
         }
 
         #endregion Methods
 
         #region Classes
 
+        public class ResultField
+        {
+            
+            public string Value { get; set; }
+            public bool IsSheetNum { get; set; }
+            public bool IsRevNum { get; set; }
+            public string[] AllValues { get; set; }
+            public Side ResultSide { get; set; }
+            public int Num { get; set; }
+
+            public ResultField()
+            {
+                Value = "xx";
+                IsRevNum = false;
+                IsSheetNum = false;
+                AllValues = new string[]{};
+                ResultSide = Side.Left;
+                Num = 0;
+            }
+        }
+        
         public sealed class ImportedFile : INotifyPropertyChanged
         {
             #region Props
@@ -223,10 +284,12 @@ namespace RCP_Drawings_Releaser.ViewModels
             NewDrawings = new List<ImportedFile>();
             OldDrawings = new List<ImportedFile>();
             Analyze = new AnalyzeCommand(this);
-            FieldResults = new BindingList<StringLogic.ResultField>();
+            FieldResults = new BindingList<ResultField>();
         }
 
         #endregion
+
+        
     }
 
 }

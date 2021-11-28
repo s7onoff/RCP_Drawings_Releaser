@@ -21,3 +21,5 @@ C:\Users\s77\source\repos\RCP_Drawings_Releaser\obj\Debug\RCP_Drawings_Releaser.
 C:\Users\s77\source\repos\RCP_Drawings_Releaser\obj\Debug\RCP_Drawings_Releaser.exe
 C:\Users\s77\source\repos\RCP_Drawings_Releaser\obj\Debug\RCP_Drawings_Releaser.pdb
 C:\Users\s77\source\repos\RCP_Drawings_Releaser\obj\Debug\RCP_Drawings_Releaser.csproj.AssemblyReference.cache
+C:\Users\s77\source\repos\RCP_Drawings_Releaser\obj\Debug\RCP_Drawings_Releaser_Content.g.cs
+C:\Users\s77\source\repos\RCP_Drawings_Releaser\bin\Debug\ListViewDragDropManager.dll

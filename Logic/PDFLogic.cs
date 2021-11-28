@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
 using PdfSharp.Pdf;
 using PdfSharp.Pdf.IO;
 
@@ -7,7 +8,6 @@ namespace RCP_Drawings_Releaser
 {
     class PDFLogic
     {
-        
         public static void MergeDocsTest()
         {
             var doc3 = new PdfDocument();
@@ -20,5 +20,9 @@ namespace RCP_Drawings_Releaser
             doc3.Save("C:\\Users\\s77\\Downloads\\export.pdf");
 
         }
+        
+        //TODO PDFs Merge
+        //TODO Doc to PDF
+        
     }
 }

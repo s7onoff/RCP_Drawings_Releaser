@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.IO;
+using System.Xml.Schema;
 
 namespace RCP_Drawings_Releaser
 {
@@ -19,7 +21,7 @@ namespace RCP_Drawings_Releaser
             public bool IsDrawing { get; set; }
         }
 
-        private class FieldColumn
+        public class FieldColumn
         {
             public int Num { get; set; }
             public List<string> Fields { get; set; }
@@ -29,6 +31,7 @@ namespace RCP_Drawings_Releaser
             public bool IsNumber { get; set; }
             public bool IsSheetNum { get; set; }
             public bool IsRevNum { get; set; }
+            public Side ColumnSide { get; set; }
             public FieldColumn()
             {
                 Num = 0;
@@ -39,69 +42,40 @@ namespace RCP_Drawings_Releaser
                 IsNumber = false;
                 IsSheetNum = false;
                 IsRevNum = false;
+                ColumnSide = Side.Left;
             }
         }
         
-        public class ResultField
-        {
-            public string Value { get; set; }
-            public bool IsSheetNum { get; set; }
-            public bool IsRevNum { get; set; }
-
-            public string[] AllValues { get; set; }
-
-            public ResultField()
-            {
-                Value = "xx";
-                IsRevNum = false;
-                IsSheetNum = false;
-                AllValues = new string[]{};
-            }
-        }
-
         private static List<FileString> PdfsAndDwgs = new List<FileString>();
         private static List<FieldColumn> LeftColumns = new List<FieldColumn>();
         private static List<FieldColumn> RightColumns = new List<FieldColumn>();
-        public static List<ResultField> AnalyzeResults = new List<ResultField>();
-        
-        
-        
-        public static List<ResultField> AnalyzeData(List<string> fileNames)
+        public static List<FieldColumn> ResultColumns = new List<FieldColumn>();
+
+        public static Side SheetNumSide { get; private set; }
+        public static Side RevNumSide { get; private set; }
+        public static int SheetNumPosition { get; private set; }
+        public static int RevNumPosition { get; private set; }
+
+        public static List<FieldColumn> AnalyzeData(List<string> fileNames)
         {
+            if (fileNames.Count == 0) return ResultColumns;
             FlushData();
             CreateFieldsFromFileNames(fileNames);
             CreateFieldColumns(Side.Left);
+            FillColumnsData(Side.Left);
             CreateFieldColumns(Side.Right);
+            FillColumnsData(Side.Right);
             FindSheetNumber();
-            FindRev(RightColumns);
+            FindRev();
             PrepareResults();
-            return AnalyzeResults;
+            return ResultColumns;
         }
-
-        private static void PrepareResults()
-        {
-            foreach (var column in LeftColumns.Concat(Enumerable.Reverse(RightColumns).ToList()))
-            {
-                var thisFieldResult = new ResultField();
-
-                if (column.IsConst)
-                {
-                    thisFieldResult.Value = column.ConstValue;
-                }
-                thisFieldResult.IsSheetNum = column.IsSheetNum;
-                thisFieldResult.IsRevNum = column.IsRevNum;
-                thisFieldResult.AllValues = column.Fields.ToArray();
-                
-                AnalyzeResults.Add(thisFieldResult);
-            }
-        }
-
         private static void FlushData()
         {
             PdfsAndDwgs.Clear();
             LeftColumns.Clear();
             RightColumns.Clear();
-            AnalyzeResults.Clear();
+            ResultColumns.Clear();
         }
         
         private static void CreateFieldsFromFileNames(List<string> fileNames)
@@ -128,7 +102,6 @@ namespace RCP_Drawings_Releaser
         
         private static void CreateFieldColumns(Side side)
         {
-            // Columns quantity calculation
             var minLength = PdfsAndDwgs.Select(fileString => fileString.Fields.Length).Min();
 
             var columns = ((side == Side.Left) ? LeftColumns : RightColumns);
@@ -137,24 +110,28 @@ namespace RCP_Drawings_Releaser
             {
                 columns.Add(new FieldColumn());
                 
+                // All columns filling from left to right
+                
                 foreach (var drawing in PdfsAndDwgs)
                 {
-                    columns[i].Fields.Add(drawing.Fields[((side == Side.Left) ? i : minLength-1)]);
+                    columns[i].Fields.Add(drawing.Fields[((side == Side.Left) ? i : drawing.Fields.Length - minLength + i)]);
                     columns[i].Num = i;
+                    columns[i].ColumnSide = side;
                 }
             }
-            
-            FillColumnData(columns);
         }
-        private static void FillColumnData(List<FieldColumn> columns)
+        private static void FillColumnsData(Side side)
         {
-            foreach (var column in columns)
+            var columns = side == Side.Left ? LeftColumns : RightColumns;
+            for (var index = 0; index < columns.Count; index++)
             {
+                var column = columns[index];
                 column.IsConst = CheckIfConst(column.Fields);
                 if (column.IsConst)
                 {
                     column.ConstValue = column.Fields[0];
                 }
+
                 column.IsNumber = CheckIfNumber(column.Fields);
                 column.HomogenityPercentage = CalcHomogenity(column.Fields);
             }
@@ -186,38 +163,192 @@ namespace RCP_Drawings_Releaser
             var columnHomogenityPercentage = 1.0;
             var columnNum = 0;
             var side = Side.Left;
-            foreach (var column in LeftColumns)
+            foreach (var column in LeftColumns.Where(column => column.HomogenityPercentage < columnHomogenityPercentage))
             {
-                if (column.HomogenityPercentage < columnHomogenityPercentage)
-                {
-                    columnHomogenityPercentage = column.HomogenityPercentage;
-                    columnNum = column.Num;
-                    side = Side.Left;
-                }
+                columnHomogenityPercentage = column.HomogenityPercentage;
+                columnNum = column.Num;
+                side = Side.Left;
             }
-            foreach (var column in RightColumns)
+
+            foreach (var column in RightColumns.Where(column => column.HomogenityPercentage < columnHomogenityPercentage))
             {
-                if (column.HomogenityPercentage < columnHomogenityPercentage)
-                {
-                    columnHomogenityPercentage = column.HomogenityPercentage;
-                    columnNum = column.Num;
-                    side = Side.Right;
-                }
+                columnHomogenityPercentage = column.HomogenityPercentage;
+                columnNum = column.Num;
+                side = Side.Right;
             }
+
+            SheetNumSide = side;
             (side == Side.Left? LeftColumns : RightColumns)[columnNum].IsSheetNum = true;
+            SheetNumPosition = columnNum;
         }
         
-        private static void FindRev(List<FieldColumn> columns)
+        private static void FindRev()
         {
-            int? columnNum = null;
-            foreach (var column in columns.Where(column => column.IsNumber))
-            {
-                columnNum = column.Num;
-            } 
             
-            if (columnNum != null)
+            // Checking for revision number set explicitly 
+            var revPrefixes = new[] {"rev", "Р"};
+            
+            var bothColumnLists = new List<List<FieldColumn>>();
+            bothColumnLists.Add(LeftColumns);
+            bothColumnLists.Add(RightColumns);
+
+            foreach (var columns in bothColumnLists)
             {
-                columns[(int) columnNum].IsRevNum = true;
+                for (var index = 0; index < columns.Count; index++)
+                {
+                    var column = columns[index];
+                    if (column.IsSheetNum)
+                        continue;
+                    if (column.IsNumber && index != 0)
+                    {
+                        // Check if revision prefix is set in previous fields:
+                        if (revPrefixes.Any(x =>
+                            String.Equals(x, columns[index - 1].ConstValue, StringComparison.CurrentCultureIgnoreCase)))
+                        {
+                            column.IsRevNum = true;
+                            RevNumSide = (columns == LeftColumns ? Side.Left : Side.Right);
+                            RevNumPosition = index;
+                        }
+                    }
+                    else
+                    {
+                        // Check if revision prefix is set in revision field:
+                        if (revPrefixes.Any(x => column.Fields.All(f => f.ToLower().StartsWith(x.ToLower()))))
+                        {
+                            bool isReallyRev = false;
+                            foreach (var prefix in revPrefixes)
+                            {
+                                try
+                                {
+                                    if(column.Fields.All(f => int.TryParse(f.Remove(0,prefix.Length), out _)))
+                                        isReallyRev = true;
+                                }
+                                catch
+                                {
+                                    continue;
+                                }
+                            }
+                            
+                            if( isReallyRev )
+                            {
+                                column.IsRevNum = true;
+                                RevNumSide = (columns == LeftColumns ? Side.Left : Side.Right);
+                                RevNumPosition = index;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            
+            // If revision is not set explicitly, revision number is set as last one number field
+            if (!(LeftColumns.Concat(RightColumns).ToList()).Any(x => x.IsRevNum))
+            {
+                int? columnNum = null;
+                foreach (var column in RightColumns.Where(column => column.IsNumber))
+                {
+                    // Sheet number field cannot be a revision number:
+                    if (column.IsSheetNum) continue;
+                    columnNum = column.Num;
+                }
+
+                // Check if left columns are the same as right to avoid mistake of taking last field as revision number
+                // if it is sheet number on the left and on the right simultaneously and it is not recognized before:
+                if ((RightColumns[RightColumns.Count - 1].Fields).SequenceEqual(LeftColumns[LeftColumns.Count-1].Fields))
+                {
+                    for (var index = 0; index < RightColumns.Count; index++)
+                    {
+                        var rightColumn = RightColumns[index];
+                        rightColumn.IsSheetNum = LeftColumns[index].IsSheetNum;
+                    }
+                }
+                    
+                // No number fields on the right -> we haven't found revision field:
+                if (columnNum == null) return;
+                
+                // Number field on the right found, let's check if it now sheet number:
+                if (RightColumns[(int) columnNum].IsSheetNum) return;
+                
+                // After all that checks we can reach here and just let the last number field to be revision
+                RightColumns[(int) columnNum].IsRevNum = true;
+                RevNumSide = Side.Right;
+                RevNumPosition = (int)columnNum;
+            }
+        }
+        
+        private static void PrepareResults()
+        {
+            foreach (var column in LeftColumns)
+            {
+                switch (SheetNumSide)
+                {
+                    case Side.Left when RevNumSide == Side.Left:
+                        {
+                            if(column.Num <= SheetNumPosition || column.Num <= RevNumPosition)
+                                ResultColumns.Add(column);
+                            break;
+                        }
+                        case Side.Left when RevNumSide == Side.Right:
+                        {
+                            if(column.Num <= SheetNumPosition)
+                                ResultColumns.Add(column);
+                            break;
+                        }
+                        case Side.Right when RevNumSide == Side.Left:
+                        {
+                            // Unbelievable
+                            if(column.Num <= RevNumPosition)
+                                ResultColumns.Add(column);
+                            break;
+                        }
+                        case Side.Right when RevNumSide == Side.Right:
+                        {
+                            break;
+                        }
+                    default:
+                    {
+                        // Impossible for real
+                        ResultColumns.Add(column);
+                        break;
+                    }
+                }
+            }
+
+            
+            foreach (var column in RightColumns)
+            {
+                switch (SheetNumSide)
+                {
+                    case Side.Left when RevNumSide == Side.Left:
+                    {
+                        break;
+                    }
+                    case Side.Left when RevNumSide == Side.Right:
+                    {
+                        if(column.Num >= RevNumPosition)
+                            ResultColumns.Add(column);
+                        break;
+                    }
+                    case Side.Right when RevNumSide == Side.Left:
+                    {
+                        if(column.Num >= SheetNumPosition)
+                            ResultColumns.Add(column);
+                        break;
+                    } 
+                    case Side.Right when RevNumSide == Side.Right:
+                    {
+                        if(column.Num >= SheetNumPosition || column.Num >= RevNumPosition)
+                            ResultColumns.Add(column);
+                        break;
+                    }
+                    default:
+                    {
+                        // Impossible for real
+                        ResultColumns.Add(column);
+                        break;
+                    }
+                        
+                }
             }
         }
     }

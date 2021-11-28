@@ -46,22 +46,22 @@
             </Setter>
             <Setter Property="ColumnHeaderStyle" Value="{StaticResource GridHeaders}"/>
         </Style>
-        <converters:RevNumToColorConverter x:Key="RevNumToColorConverter"/>
-        <converters:SheetNumToColorConverter x:Key="SheetNumToColorConverter"/>
-
+        <converters:SheetRevNumToColorConverter x:Key="SheetRevNumToColorConverter"/>
+        
     </Window.Resources>
     <Grid x:Name="MainGrid" DataContext="{StaticResource MainVm}">
         <Grid.Background>
-            <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-                <GradientStop Color="#FFE7FFE5" Offset="0"/>
-                <GradientStop Color="#FFD3F9FF" Offset="1"/>
-                <GradientStop Color="#FFB5FFB0" Offset="0.364"/>
-                <GradientStop Color="#FFA6F2FF" Offset="0.751"/>
+            <LinearGradientBrush StartPoint="0.4,0" EndPoint="0.2,1" >
+                <GradientStop Color="#77D977" Offset="0"/>
+                <GradientStop Color="#7BBD7B" Offset="0.265"/>
+                <GradientStop Color="#70CC9E" Offset="0.560"/> 
+                <GradientStop Color="#8EBDBD" Offset="0.855"/>
+                <GradientStop Color="#77D9D9" Offset="1"/>
             </LinearGradientBrush>
         </Grid.Background>
         <Grid.RowDefinitions>
             <RowDefinition Height="10"/>
-            <RowDefinition Height="50"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="20"/>
             <RowDefinition Height="8*"/>
             <RowDefinition Height="20"/>
@@ -69,16 +69,17 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="4*"/>
+            <ColumnDefinition Width="8*"/>
+            <ColumnDefinition Width="5"/>
+            <ColumnDefinition Width="8*"/>
             <ColumnDefinition Width="5"/>
             <ColumnDefinition Width="4*"/>
-            <ColumnDefinition Width="5"/>
-            <ColumnDefinition Width="2*"/>
         </Grid.ColumnDefinitions>
 
-        <TextBlock Text="Новые чертежи:"
+        <TextBlock Text="New"
                    Grid.Column="0"
                    Grid.Row="2"
+                   FontSize="14"
                    VerticalAlignment="Bottom"
                    HorizontalAlignment="Center"/>
 
@@ -94,19 +95,21 @@
                   >
             <DataGrid.Columns>
                 <DataGridTextColumn 
-                    Header="Имя" 
+                    Header="File" 
                     Binding="{Binding Name}"
                     IsReadOnly="True"
-                    Width="7*"/>
+                    Width="7*">
+                </DataGridTextColumn>
                 <DataGridTextColumn 
-                    Header="Тип" 
+                    Header=".ext" 
                     Binding="{Binding Extension}"
                     IsReadOnly="True"
                     Width="*"/>
             </DataGrid.Columns>
         </DataGrid>
 
-        <TextBlock Text="Старые чертежи:"
+        <TextBlock Text="Old"
+                   FontSize="14"
                    Grid.Column="0"
                    Grid.Row="4"
                    VerticalAlignment="Bottom"
@@ -120,16 +123,16 @@
                   DragDrop.Drop="drawings_Drop"
                   ItemsSource="{Binding OldDrawings}" 
                   Background="#7FA6F2FF" 
-                  BorderBrush="#FF00788B"
+                  BorderBrush="#FF0E9500"
                   BorderThickness="2">
             <DataGrid.Columns>
                 <DataGridTextColumn 
-                    Header="Имя" 
+                    Header="File" 
                     Binding="{Binding Name}"
                     IsReadOnly="True"
                     Width="7*"/>
                 <DataGridTextColumn 
-                    Header="Тип" 
+                    Header=".ext" 
                     Binding="{Binding Extension}"
                     IsReadOnly="True"
                     Width="*"/>
@@ -151,7 +154,7 @@
             Grid.Column="2"
             Grid.RowSpan="3"
             Margin="2" Background="#FCFFF0D5"
-            BorderBrush="Red"
+            BorderBrush="#FF0E9500"
             BorderThickness="2"
             
             />
@@ -171,35 +174,110 @@
             Grid.ColumnSpan="3"
             />
 
-        <ListBox
-            Grid.Row="1"
-            Grid.Column="0"
-            Background="Transparent"
-            Margin="2"
-            BorderBrush="#FF0E9500"
-            BorderThickness="2" VerticalAlignment="Stretch"
-            ItemsSource="{Binding Path=FieldResults}">
-            <ListBox.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <WrapPanel Orientation="Horizontal"/>
-                </ItemsPanelTemplate>
-            </ListBox.ItemsPanel>
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <TextBlock 
-                        Text="{Binding Value}"
-                        Background="{Binding Path=IsSheetNum, 
-                            Converter={StaticResource SheetNumToColorConverter} }">
-                        <TextBlock.ToolTip>
-                            <ListView ItemsSource="{Binding AllValues}"/>
-                        </TextBlock.ToolTip>
-                    </TextBlock>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
-        <Button Grid.Column="2" Grid.Row="1" VerticalAlignment="Stretch" 
-                Content="Analyze" 
-                Command="{Binding Analyze}"
-        />
+        <Grid Row="1" Column="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="5*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Button Grid.Column="0" 
+                    Grid.Row="0"
+                    Grid.RowSpan="2"
+                    VerticalAlignment="Stretch" 
+                    Command="{Binding Analyze}"
+                    Margin="2"
+                    BorderBrush="#FF0E9500"
+                    BorderThickness="2" 
+                    Background="White"
+                    VerticalContentAlignment="Center"
+            >
+                <Image Source="../Images/updating.png" Height="22" Margin="5"></Image>
+            </Button>    
+            <ListBox
+                Grid.Row="0"
+                Grid.RowSpan="2"
+                Grid.Column="1"
+                Background="Transparent"
+                Margin="2"
+                BorderBrush="#FF0E9500"
+                BorderThickness="2"
+                VerticalAlignment="Stretch"
+                ItemsSource="{Binding Path=FieldResults}"
+                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+            >
+                
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <EventSetter Event="Selected" 
+                                     Handler="EventSetter_OnHandler" />
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid VerticalAlignment="Stretch">
+                            <Rectangle Grid.Row="0" Grid.Column="0"
+                                       VerticalAlignment="Stretch"
+                                       Height="24" Width="30" 
+                                       RadiusX="2"
+                                       RadiusY="2" 
+                                       StrokeThickness="1"
+                                       Stroke="Black"
+                                       Margin="1"
+                            >
+                                <Rectangle.Fill>
+                                    <MultiBinding Converter="{StaticResource SheetRevNumToColorConverter}" >
+                                        <Binding Path="IsSheetNum" Mode="OneWay"/>
+                                        <Binding Path="IsRevNum" Mode="OneWay"/>
+                                    </MultiBinding>
+                                </Rectangle.Fill>
+                                <Rectangle.ToolTip>
+                                    <ListView ItemsSource="{Binding AllValues}"/>
+                                </Rectangle.ToolTip>
+                            </Rectangle>
+                            <TextBlock Grid.Column="0" Grid.Row="0"
+                                       Text="{Binding Value}" 
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Center">
+                                <TextBlock.ToolTip>
+                                    <ListView ItemsSource="{Binding AllValues}"/>
+                                </TextBlock.ToolTip>
+                            </TextBlock>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <Button Grid.Column="2" Grid.Row="0"
+                    Background="LawnGreen"
+                    Margin="2"
+                    BorderBrush="#FF0E9500"
+                    BorderThickness="2"
+                    AllowDrop="True"
+                    Click="ListNum_OnClick"
+                    >
+                <TextBlock Text="List"
+                           Foreground="DarkGreen"
+                           FontWeight="Bold"/>
+            </Button>
+            <Button Grid.Column="2" Grid.Row="1"
+                    Background="DodgerBlue"
+                    Margin="2"
+                    BorderBrush="#FF0E9500"
+                    BorderThickness="2"
+                    AllowDrop="True"
+                    Click="RevNum_OnClick">
+                <TextBlock Text="Rev"
+                           Foreground="MidnightBlue"
+                           FontWeight="Bold"/>
+            </Button>
+        </Grid>
     </Grid>
 </Window>
