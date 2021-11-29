@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Drawing;
 using System.Linq;
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Xml.Schema;
 
 namespace RCP_Drawings_Releaser
@@ -24,6 +26,7 @@ namespace RCP_Drawings_Releaser
         public class FieldColumn
         {
             public int Num { get; set; }
+            public int NumFromRight { get; set; }
             public List<string> Fields { get; set; }
             public bool IsConst { get; set; }
             public string ConstValue { get; set; }
@@ -35,6 +38,7 @@ namespace RCP_Drawings_Releaser
             public FieldColumn()
             {
                 Num = 0;
+                NumFromRight = 0;
                 Fields = new List<string>();
                 IsConst = false;
                 ConstValue = "";
@@ -49,13 +53,13 @@ namespace RCP_Drawings_Releaser
         private static List<FileString> PdfsAndDwgs = new List<FileString>();
         private static List<FieldColumn> LeftColumns = new List<FieldColumn>();
         private static List<FieldColumn> RightColumns = new List<FieldColumn>();
-        public static List<FieldColumn> ResultColumns = new List<FieldColumn>();
+        private static List<FieldColumn> ResultColumns = new List<FieldColumn>();
 
-        public static Side SheetNumSide { get; private set; }
-        public static Side RevNumSide { get; private set; }
-        public static int SheetNumPosition { get; private set; }
-        public static int RevNumPosition { get; private set; }
-
+        private static Side SheetNumSide { get; set; }
+        private static Side RevNumSide { get; set; }
+        private static int SheetNumPosition { get; set; }
+        private static int RevNumPosition { get; set; }
+        private static char[] Delimiters { get; set; }
         public static List<FieldColumn> AnalyzeData(List<string> fileNames)
         {
             if (fileNames.Count == 0) return ResultColumns;
@@ -70,6 +74,24 @@ namespace RCP_Drawings_Releaser
             PrepareResults();
             return ResultColumns;
         }
+
+        public static void ChangeDelimiters(string delimitersString)
+        {
+            Delimiters = delimitersString.ToCharArray();
+            Delimiters = Delimiters.Append(' ').ToArray();
+        }
+        
+        public static int GetNumberField(string sheetName, int fieldNumber, Side side)
+        {
+            var field = (side == Side.Left)
+                ? sheetName.Split(Delimiters)[fieldNumber]
+                : sheetName.Split(Delimiters).Reverse().ToArray()[fieldNumber];
+
+            int.TryParse(Regex.Replace(field, "[^0-9]", ""), out var result);
+            
+            return result;
+        }
+        
         private static void FlushData()
         {
             PdfsAndDwgs.Clear();
@@ -83,13 +105,11 @@ namespace RCP_Drawings_Releaser
             foreach (var fileName in fileNames)
             {
                 var fileString = new FileString();
-                
-                char[] delimiters = {'.', ' ', '-'};
-                
+
                 if (Path.GetExtension(fileName) == ".pdf" || Path.GetExtension(fileName) == ".dwg" )
                 {
                     fileString.IsDrawing = true;
-                    fileString.Fields = Path.GetFileNameWithoutExtension(fileName).Split(delimiters);
+                    fileString.Fields = Path.GetFileNameWithoutExtension(fileName).Split(Delimiters);
                     PdfsAndDwgs.Add(fileString);
                 }
                 else
@@ -106,7 +126,7 @@ namespace RCP_Drawings_Releaser
 
             var columns = ((side == Side.Left) ? LeftColumns : RightColumns);
             
-            for (int i = 0; i < minLength; i++)
+            for (var i = 0; i < minLength; i++)
             {
                 columns.Add(new FieldColumn());
                 
@@ -116,6 +136,7 @@ namespace RCP_Drawings_Releaser
                 {
                     columns[i].Fields.Add(drawing.Fields[((side == Side.Left) ? i : drawing.Fields.Length - minLength + i)]);
                     columns[i].Num = i;
+                    columns[i].NumFromRight = minLength - i - 1;
                     columns[i].ColumnSide = side;
                 }
             }
@@ -351,5 +372,6 @@ namespace RCP_Drawings_Releaser
                 }
             }
         }
+
     }
 }

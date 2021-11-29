@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Windows.Controls;
 using System.Windows.Input;
 using RCP_Drawings_Releaser.Annotations;
 
@@ -90,19 +89,98 @@ namespace RCP_Drawings_Releaser.ViewModels
                     thisFieldResult.AllValues = column.Fields.ToArray();
                     thisFieldResult.ResultSide = column.ColumnSide;
                     thisFieldResult.Num = column.Num;
+                    thisFieldResult.NumFromRight = column.NumFromRight;
 
                     VM.FieldResults.Add(thisFieldResult);
                 }
             }
         }
+
+        public class SheetNumSelectCommand : ButtonCommand
+        {
+            public SheetNumSelectCommand(MainWindowVM vm) : base(vm) { }
+
+            public override void Execute(object parameter)
+            {
+                if (VM.SheetNumSelectingEnabled)
+                {
+                    VM.SheetNumSelectingEnabled = false;
+                }
+                else
+                {
+                    VM.RevNumSelectingEnabled = false;
+                    VM.SheetNumSelectingEnabled = true;   
+                }
+            }
+        }
         
+        public class RevNumSelectCommand : ButtonCommand
+        {
+            public RevNumSelectCommand(MainWindowVM vm) : base(vm) { }
+
+            public override void Execute(object parameter)
+            {
+                if (VM.RevNumSelectingEnabled)
+                {
+                    VM.RevNumSelectingEnabled = false;
+                }
+                else
+                {
+                    VM.SheetNumSelectingEnabled = false;
+                    VM.RevNumSelectingEnabled = true;      
+                }
+            }
+        }
+        
+        public class FillAlbumListCommand : ButtonCommand
+        {
+            public FillAlbumListCommand(MainWindowVM vm) : base(vm) { }
+
+            public override void Execute(object parameter)
+            {
+                VM.FillAlbumDrawings();
+            }
+        }
         #endregion
 
         #region Props
         
-        public AnalyzeCommand Analyze { get; set; }
+        public bool SheetNumSelectingEnabled
+        {
+            get => _sheetNumSelectingEnabled;
+            set
+            {
+                _sheetNumSelectingEnabled = value;
+                OnPropertyChanged(nameof(SheetNumSelectingEnabled));
+            }
+        }
         
-        private BindingList<ResultField> _fieldResults;
+        public bool RevNumSelectingEnabled
+        {
+            get => _revNumSelectingEnabled;
+            set
+            {
+                _revNumSelectingEnabled = value;
+                OnPropertyChanged(nameof(RevNumSelectingEnabled));
+            }
+        }
+
+        public string Delimiters
+        {
+            get => _delimiters;
+            set
+            {
+                _delimiters = value; 
+                OnPropertyChanged(nameof(Delimiters));
+                StringLogic.ChangeDelimiters(value);
+            }
+        }
+
+        public AnalyzeCommand Analyze { get; }
+        public SheetNumSelectCommand SheetNumSelect { get; }
+        public RevNumSelectCommand RevNumSelect { get;  }
+        public FillAlbumListCommand FillAlbumList { get; }
+        
         public BindingList<ResultField> FieldResults
         {
             get => _fieldResults;
@@ -113,7 +191,6 @@ namespace RCP_Drawings_Releaser.ViewModels
             }
         }
 
-        private List<ImportedFile> _newDrawings;
         public List<ImportedFile> NewDrawings
         {
             get => _newDrawings;
@@ -124,7 +201,7 @@ namespace RCP_Drawings_Releaser.ViewModels
             }
         }
 
-        private List<ImportedFile> _oldDrawings;
+
         public List<ImportedFile> OldDrawings
         {
             get => _oldDrawings;
@@ -134,6 +211,24 @@ namespace RCP_Drawings_Releaser.ViewModels
                 OnPropertyChanged(nameof(OldDrawings));
             }
         }
+
+        public ObservableCollection<ImportedFile> AlbumDrawings
+        {
+            get => _albumDrawings;
+            set
+            {
+                _albumDrawings = value; 
+                OnPropertyChanged(nameof(AlbumDrawings));
+            }
+        }
+
+        private bool _sheetNumSelectingEnabled;
+        private bool _revNumSelectingEnabled;
+        private string _delimiters;
+        private BindingList<ResultField> _fieldResults;
+        private List<ImportedFile> _newDrawings;
+        private List<ImportedFile> _oldDrawings;
+        private ObservableCollection<ImportedFile> _albumDrawings;
 
         #endregion
 
@@ -151,11 +246,10 @@ namespace RCP_Drawings_Releaser.ViewModels
 
             TableItemsFromDirectory(files, ref chosenTable);
         }
+        
 
         private ImportedFile TableItemFromFile(string file)
         {
-            // var drawingFileString = new StringLogic.FileString(file);
-            
             var drawing = new ImportedFile
             {
                 FullPath = Path.Combine(file),
@@ -189,10 +283,89 @@ namespace RCP_Drawings_Releaser.ViewModels
                 field.IsSheetNum = false;
             }
             newListField.IsSheetNum = true;
-            OnPropertyChanged(nameof(FieldResults));
-            //todo:not working update of converter binding:
-            OnPropertyChanged(nameof(newListField));
-            OnPropertyChanged(nameof(newListField.IsSheetNum));
+        }
+        
+        public void ChangeRevNumField(ResultField newListField)
+        {
+            foreach (var field in FieldResults)
+            {
+                field.IsRevNum = false;
+            }
+            newListField.IsRevNum = true;
+        }
+        
+        public void SetDrawingsSheetsAndRevs(List<ImportedFile> drawingsList)
+        {
+            int sheetPosition = 0;
+            Side sheetSide = Side.Left;
+            int revPosition = 0;
+            Side revSide = Side.Left;
+
+            foreach (var fieldResult in FieldResults)
+            {
+                if (fieldResult.IsSheetNum)
+                {
+                    sheetPosition = (fieldResult.ResultSide == Side.Left) ? fieldResult.Num : fieldResult.NumFromRight;
+                    sheetSide = fieldResult.ResultSide;
+                }
+                else if(fieldResult.IsRevNum)
+                {
+                    revPosition = (fieldResult.ResultSide == Side.Left) ? fieldResult.Num : fieldResult.NumFromRight;
+                    revSide = fieldResult.ResultSide;
+                }
+            }
+            
+            foreach (var importedFile in drawingsList)
+            {
+                importedFile.SheetNum = StringLogic.GetNumberField(importedFile.Name, sheetPosition, sheetSide);
+                importedFile.RevNum = StringLogic.GetNumberField(importedFile.Name, revPosition, revSide);
+            }
+        }
+
+        private void FillAlbumDrawings()
+        {
+            SetDrawingsSheetsAndRevs(NewDrawings);
+            SetDrawingsSheetsAndRevs(OldDrawings);
+            
+            AlbumDrawings.Clear();
+
+            foreach (var drawing in NewDrawings.Where(drawing => drawing.Extension == ".pdf" || drawing.Extension == ".docx"))
+            {
+                AlbumDrawings.Add(drawing);
+            }
+
+            foreach (var oldDrawing in OldDrawings.Where(d => d.Extension == ".pdf" || d.Extension == ".docx"))
+            {
+                if (AlbumDrawings.Any(albumDrawing => albumDrawing.SheetNum == oldDrawing.SheetNum &&
+                                                      albumDrawing.Extension == oldDrawing.Extension &&
+                                                      albumDrawing.RevNum < oldDrawing.RevNum))
+                {
+                    // Вах какой костыль блять
+                    var tempList = AlbumDrawings.ToList();
+                    AlbumDrawings.Remove(tempList
+                        .Find(albumDrawing =>
+                            albumDrawing.SheetNum == oldDrawing.SheetNum &&
+                            albumDrawing.Extension == oldDrawing.Extension &&
+                            albumDrawing.RevNum < oldDrawing.RevNum));
+                    AlbumDrawings.Add(oldDrawing);
+                    continue;
+                }
+
+                if (AlbumDrawings.All(albumDrawing => 
+                    (albumDrawing.SheetNum != oldDrawing.SheetNum) || 
+                    (albumDrawing.SheetNum == oldDrawing.SheetNum &&
+                     albumDrawing.Extension != oldDrawing.Extension)))
+                {
+                    AlbumDrawings.Add(oldDrawing);
+                }
+            }
+
+            var orderedDrawings = AlbumDrawings.OrderBy(x => x.SheetNum).ToList();
+            AlbumDrawings.Clear();
+            foreach (var drawing in orderedDrawings)
+            {
+                AlbumDrawings.Add(drawing);
+            }
         }
 
         #endregion Methods
@@ -208,6 +381,7 @@ namespace RCP_Drawings_Releaser.ViewModels
             public string[] AllValues { get; set; }
             public Side ResultSide { get; set; }
             public int Num { get; set; }
+            public int NumFromRight { get; set; }
 
             public ResultField()
             {
@@ -217,6 +391,7 @@ namespace RCP_Drawings_Releaser.ViewModels
                 AllValues = new string[]{};
                 ResultSide = Side.Left;
                 Num = 0;
+                NumFromRight = 0;
             }
         }
         
@@ -262,6 +437,9 @@ namespace RCP_Drawings_Releaser.ViewModels
                 }
             }
 
+            public int SheetNum { get; set; }
+            public int RevNum { get; set; }
+
             #endregion
 
             #region INotify
@@ -281,10 +459,18 @@ namespace RCP_Drawings_Releaser.ViewModels
 
         public MainWindowVM()
         {
+            RevNumSelectingEnabled = false;
+            SheetNumSelectingEnabled = false;
+            Delimiters = ".-_[]";
             NewDrawings = new List<ImportedFile>();
             OldDrawings = new List<ImportedFile>();
-            Analyze = new AnalyzeCommand(this);
             FieldResults = new BindingList<ResultField>();
+            AlbumDrawings = new ObservableCollection<ImportedFile>();
+            
+            Analyze = new AnalyzeCommand(this);
+            SheetNumSelect = new SheetNumSelectCommand(this);
+            RevNumSelect = new RevNumSelectCommand(this);
+            FillAlbumList = new FillAlbumListCommand(this);
         }
 
         #endregion

@@ -47,7 +47,7 @@
             <Setter Property="ColumnHeaderStyle" Value="{StaticResource GridHeaders}"/>
         </Style>
         <converters:SheetRevNumToColorConverter x:Key="SheetRevNumToColorConverter"/>
-        
+        <converters:NumSelectingToColorConverter x:Key="NumSelectingToColorConverter"/>
     </Window.Resources>
     <Grid x:Name="MainGrid" DataContext="{StaticResource MainVm}">
         <Grid.Background>
@@ -62,9 +62,9 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="10"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="20"/>
+            <RowDefinition Height="21"/>
             <RowDefinition Height="8*"/>
-            <RowDefinition Height="20"/>
+            <RowDefinition Height="21"/>
             <RowDefinition Height="7*"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
@@ -108,7 +108,7 @@
             </DataGrid.Columns>
         </DataGrid>
 
-        <TextBlock Text="Old"
+        <TextBlock Text="Old and others"
                    FontSize="14"
                    Grid.Column="0"
                    Grid.Row="4"
@@ -156,8 +156,23 @@
             Margin="2" Background="#FCFFF0D5"
             BorderBrush="#FF0E9500"
             BorderThickness="2"
-            
-            />
+            ItemsSource="{Binding AlbumDrawings}">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="8*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <TextBlock Grid.Column="0" Text="{Binding Name}"/>
+                        <TextBlock Grid.Column="1" Text="{Binding SheetNum}"/>
+                        <TextBlock Grid.Column="2" Text="{Binding RevNum}"/>
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
         
         <GridSplitter 
             Grid.Column="3" 
@@ -180,34 +195,47 @@
                 <ColumnDefinition Width="5*"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-            <Button Grid.Column="0" 
-                    Grid.Row="0"
-                    Grid.RowSpan="2"
-                    VerticalAlignment="Stretch" 
-                    Command="{Binding Analyze}"
-                    Margin="2"
-                    BorderBrush="#FF0E9500"
-                    BorderThickness="2" 
-                    Background="White"
-                    VerticalContentAlignment="Center"
-            >
-                <Image Source="../Images/updating.png" Height="22" Margin="5"></Image>
-            </Button>    
-            <ListBox
-                Grid.Row="0"
-                Grid.RowSpan="2"
-                Grid.Column="1"
-                Background="Transparent"
-                Margin="2"
-                BorderBrush="#FF0E9500"
-                BorderThickness="2"
-                VerticalAlignment="Stretch"
-                ItemsSource="{Binding Path=FieldResults}"
-                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBox Grid.Column="0" 
+                         Grid.Row="0"
+                         Margin="2"
+                         Height="24"
+                         VerticalContentAlignment="Center"
+                         x:Name="Delimiters" 
+                         BorderBrush="#FF0E9500"
+                         BorderThickness="2"
+                         Text="{Binding Delimiters,
+                            Mode=TwoWay,
+                            UpdateSourceTrigger=LostFocus}"
+                         ToolTip="Delimiters of Project Coding"/>
+                <Button Grid.Column="0" 
+                        Grid.Row="1"
+                        VerticalAlignment="Stretch" 
+                        Command="{Binding Analyze}"
+                        Margin="2"
+                        BorderBrush="#FF0E9500"
+                        BorderThickness="2" 
+                        Background="#B0FFA6"
+                        VerticalContentAlignment="Center"
+                        Height="Auto"
+                >
+                    <Image Source="../Images/updating.png" Height="22" Margin="5"></Image>
+                </Button>    
+            </Grid>
+            <ListBox x:Name="FieldsListBox"
+                     Grid.Row="0"
+                     Grid.Column="1"
+                     Background="Transparent"
+                     Margin="2"
+                     BorderBrush="#FF0E9500"
+                     BorderThickness="2"
+                     VerticalAlignment="Stretch"
+                     ItemsSource="{Binding Path=FieldResults}"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
             >
                 
                 <ListBox.ItemContainerStyle>
@@ -226,7 +254,7 @@
                         <Grid VerticalAlignment="Stretch">
                             <Rectangle Grid.Row="0" Grid.Column="0"
                                        VerticalAlignment="Stretch"
-                                       Height="24" Width="30" 
+                                       Height="24" Width="Auto" MinWidth="30" 
                                        RadiusX="2"
                                        RadiusY="2" 
                                        StrokeThickness="1"
@@ -246,7 +274,8 @@
                             <TextBlock Grid.Column="0" Grid.Row="0"
                                        Text="{Binding Value}" 
                                        VerticalAlignment="Center"
-                                       HorizontalAlignment="Center">
+                                       HorizontalAlignment="Center"
+                                       Margin="5,0">
                                 <TextBlock.ToolTip>
                                     <ListView ItemsSource="{Binding AllValues}"/>
                                 </TextBlock.ToolTip>
@@ -255,29 +284,51 @@
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
-            <Button Grid.Column="2" Grid.Row="0"
-                    Background="LawnGreen"
-                    Margin="2"
-                    BorderBrush="#FF0E9500"
-                    BorderThickness="2"
-                    AllowDrop="True"
-                    Click="SheetNum_OnClick"
-                    >
-                <TextBlock Text="Sheet"
-                           Foreground="DarkGreen"
-                           FontWeight="Bold"/>
-            </Button>
-            <Button Grid.Column="2" Grid.Row="1"
-                    Background="DodgerBlue"
-                    Margin="2"
-                    BorderBrush="#FF0E9500"
-                    BorderThickness="2"
-                    AllowDrop="True"
-                    Click="RevNum_OnClick">
-                <TextBlock Text="Rev"
-                           Foreground="MidnightBlue"
-                           FontWeight="Bold"/>
-            </Button>
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition/>
+                    <RowDefinition/>
+                </Grid.RowDefinitions>
+                <Button Grid.Row="0"
+                        Background="LawnGreen"
+                        Margin="2"
+                        BorderBrush="{Binding SheetNumSelectingEnabled,
+                                Converter={StaticResource NumSelectingToColorConverter}}"
+                        BorderThickness="2"
+                        AllowDrop="True"
+                        Command="{Binding SheetNumSelect}"
+                >
+                    <TextBlock Text="Sheet"
+                               Foreground="DarkGreen"
+                               FontWeight="Bold"/>
+                </Button>
+                <Button Grid.Row="1"
+                        Background="DodgerBlue"
+                        Margin="2"
+                        BorderBrush="{Binding RevNumSelectingEnabled,
+                    Converter={StaticResource NumSelectingToColorConverter}}"
+                        BorderThickness="2"
+                        AllowDrop="True"
+                        Command="{Binding RevNumSelect}">
+                    <TextBlock Text="Rev"
+                               Foreground="MidnightBlue"
+                               FontWeight="Bold"/>
+                </Button>    
+            </Grid>
         </Grid>
+        <Grid 
+            x:Name="SettingsGrid" 
+            Grid.Row="1"
+            Grid.Column="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            
+        </Grid>
+        <Button Grid.Column="2" Grid.Row="1"
+                Command="{Binding FillAlbumList}">
+            <TextBlock Text="FillList"></TextBlock>
+        </Button>
     </Grid>
 </Window>

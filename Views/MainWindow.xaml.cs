@@ -5,6 +5,9 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using PdfSharp.Pdf;
+using RCP_Drawings_Releaser.ViewModels;
+using WPF.JoshSmith.ServiceProviders.UI;
 
 namespace RCP_Drawings_Releaser.Views
 {
@@ -16,8 +19,7 @@ namespace RCP_Drawings_Releaser.Views
         public MainWindow()
         {
             InitializeComponent();
-            SheetNumSelectingEnabled = false;
-            RevNumSelectingEnabled = false;
+            new ListViewDragDropManager<MainWindowVM.ImportedFile>(FilesToCombine);
         }
         
         private void drawings_Drop(object sender, DragEventArgs e)
@@ -34,42 +36,34 @@ namespace RCP_Drawings_Releaser.Views
                 ((DataGrid)sender).Items.Refresh();
             }
         }
-
-        public bool SheetNumSelectingEnabled { get; set; }
-        public bool RevNumSelectingEnabled { get; set; }
-
-        
+     
         
         private void ButtonBase_OnClick(object sender, RoutedEventArgs e)
         {
             throw new System.NotImplementedException();
         }
-        private void SheetNum_OnClick(object sender, RoutedEventArgs e)
-        {
-            RevNumSelectingEnabled = false;
-            SheetNumSelectingEnabled = true;
-        }
-
-        private void RevNum_OnClick(object sender, RoutedEventArgs e)
-        {
-            SheetNumSelectingEnabled = false;
-            RevNumSelectingEnabled = true;
-        }
 
         private void EventSetter_OnHandler(object sender, RoutedEventArgs e)
         {
-            if (SheetNumSelectingEnabled)
+            var vm = (ViewModels.MainWindowVM)MainGrid.DataContext;
+            
+            if (vm.SheetNumSelectingEnabled)
             {
-                var vm = (ViewModels.MainWindowVM)MainGrid.DataContext;
                 var resultField = (ViewModels.MainWindowVM.ResultField)((ListBoxItem)sender).Content;
 
                 vm.ChangeListNumField(resultField);
-                //todo:can't understand how to update
-                MainGrid.UpdateLayout();
+                FieldsListBox.Items.Refresh();
+            }
+            else if (vm.RevNumSelectingEnabled)
+            {
+                var resultField = (ViewModels.MainWindowVM.ResultField)((ListBoxItem)sender).Content;
+
+                vm.ChangeRevNumField(resultField);
+                FieldsListBox.Items.Refresh();
             }
             
-            SheetNumSelectingEnabled = false;
-            RevNumSelectingEnabled = false;
+            vm.SheetNumSelectingEnabled = false;
+            vm.RevNumSelectingEnabled = false;
         }
     }
 }
