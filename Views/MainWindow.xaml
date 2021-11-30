@@ -6,20 +6,33 @@
         xmlns:converters = "clr-namespace:RCP_Drawings_Releaser.Converters"
         xmlns:viewmodels="clr-namespace:RCP_Drawings_Releaser.ViewModels"
         mc:Ignorable="d"
-        Title="MainWindow" Height="650" Width="900">
+        Title="RCP Drawings Releaser v0.1b" Height="650" Width="900"
+        AllowsTransparency="True" 
+        Background="Transparent" WindowStyle="None"
+        ResizeMode="CanResizeWithGrip">
     <Window.Resources>
         <viewmodels:MainWindowVM x:Key="MainVm"/>
 
+
         <Style x:Key="GridCells" TargetType="DataGridCell">
-            <Setter Property="Foreground" Value="#FF00005F"/>
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
             <Setter Property="FontFamily" Value="Segoe UI"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="BorderThickness" Value="0"/>
-
+            <Setter Property="FontSize" Value="12"/>
+            
         </Style>
-
+        
         <Style x:Key="GridHeaders" TargetType="DataGridColumnHeader">
             <Setter Property="Background" Value="#47FFFFFF"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush1}"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
         </Style>
 
         <Style x:Key="DrawingsTable" TargetType="DataGrid">
@@ -44,25 +57,39 @@
                     </LinearGradientBrush>
                 </Setter.Value>
             </Setter>
+            
             <Setter Property="ColumnHeaderStyle" Value="{StaticResource GridHeaders}"/>
         </Style>
+        
+        <Style TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+        </Style>
+        
         <converters:SheetRevNumToColorConverter x:Key="SheetRevNumToColorConverter"/>
-        <converters:NumSelectingToColorConverter x:Key="NumSelectingToColorConverter"/>
+        <converters:SelectingToColorConverter x:Key="SelectingToColorConverter"/>
+        <converters:NewDrawingToColorConverter x:Key="NewDrawingToColorConverter"/>
+        <converters:HasNumProblemsToColorConverter x:Key="HasNumProblemsToColorConverter"/>
     </Window.Resources>
     <Grid x:Name="MainGrid" DataContext="{StaticResource MainVm}">
         <Grid.Background>
-            <LinearGradientBrush StartPoint="0.4,0" EndPoint="0.2,1" >
-                <GradientStop Color="#77D977" Offset="0"/>
-                <GradientStop Color="#7BBD7B" Offset="0.265"/>
-                <GradientStop Color="#70CC9E" Offset="0.560"/> 
-                <GradientStop Color="#8EBDBD" Offset="0.855"/>
-                <GradientStop Color="#77D9D9" Offset="1"/>
+            <LinearGradientBrush StartPoint="0.53,0" EndPoint="0.2,1" >
+                <GradientStop Color="#F277D977" Offset="0"/>
+                <GradientStop Color="#F254BD80" Offset="0.365"/>
+                <GradientStop Color="#F20FCC81" Offset="0.610"/> 
+                <GradientStop Color="#F25DBDBD" Offset="0.755"/>
+                <GradientStop Color="#F277D9D9" Offset="1"/>
             </LinearGradientBrush>
         </Grid.Background>
         <Grid.RowDefinitions>
-            <RowDefinition Height="10"/>
+            <RowDefinition Height="30"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="21"/>
+            <RowDefinition Height="Auto" MinHeight="21"/>
             <RowDefinition Height="8*"/>
             <RowDefinition Height="21"/>
             <RowDefinition Height="7*"/>
@@ -75,13 +102,26 @@
             <ColumnDefinition Width="5"/>
             <ColumnDefinition Width="4*"/>
         </Grid.ColumnDefinitions>
-
+        
+        <Rectangle Grid.Column="0"
+                   Grid.ColumnSpan="5"
+                   Grid.Row="0" 
+                   Height="25"
+                   Fill="White"
+                   Stroke="Blue"
+                   StrokeThickness="1"
+                   Margin="0"
+                   VerticalAlignment="Top"
+                   MouseLeftButtonDown="TopPanel_OnMouseLeftButtonDown"/>
+                   
+        
         <TextBlock Text="New"
                    Grid.Column="0"
                    Grid.Row="2"
                    FontSize="14"
                    VerticalAlignment="Bottom"
-                   HorizontalAlignment="Center"/>
+                   HorizontalAlignment="Center"
+                   />
 
         <DataGrid x:Name="NewDrawingsGrid"
                   Style="{StaticResource DrawingsTable}"
@@ -90,7 +130,7 @@
                   DragDrop.Drop="drawings_Drop"
                   ItemsSource="{Binding NewDrawings}" 
                   Background="#7FB5FFB0" 
-                  BorderBrush="#FF0E9500"
+                  BorderBrush="{StaticResource BorderBrush1}"
                   BorderThickness="2"
                   >
             <DataGrid.Columns>
@@ -123,7 +163,7 @@
                   DragDrop.Drop="drawings_Drop"
                   ItemsSource="{Binding OldDrawings}" 
                   Background="#7FA6F2FF" 
-                  BorderBrush="#FF0E9500"
+                  BorderBrush="{StaticResource BorderBrush1}"
                   BorderThickness="2">
             <DataGrid.Columns>
                 <DataGridTextColumn 
@@ -141,8 +181,8 @@
 
         <GridSplitter 
             Grid.Column="1" 
-            Grid.Row="0"
-            Grid.RowSpan="7"
+            Grid.Row="1"
+            Grid.RowSpan="6"
             ResizeDirection="Columns" 
             ResizeBehavior="PreviousAndNext" 
             Width="5"
@@ -154,30 +194,23 @@
             Grid.Column="2"
             Grid.RowSpan="3"
             Margin="2" Background="#FCFFF0D5"
-            BorderBrush="#FF0E9500"
+            BorderBrush="{StaticResource BorderBrush2}"
             BorderThickness="2"
             ItemsSource="{Binding AlbumDrawings}">
             <ListView.ItemTemplate>
                 <DataTemplate>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="8*"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        
-                        <TextBlock Grid.Column="0" Text="{Binding Name}"/>
-                        <TextBlock Grid.Column="1" Text="{Binding SheetNum}"/>
-                        <TextBlock Grid.Column="2" Text="{Binding RevNum}"/>
-                    </Grid>
+                    <TextBlock 
+                        Text="{Binding Name}"
+                        Background="{Binding IsNewDrawing, 
+                        Converter={StaticResource NewDrawingToColorConverter} }"/>
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
         
         <GridSplitter 
             Grid.Column="3" 
-            Grid.Row="0"
-            Grid.RowSpan="6"
+            Grid.Row="1"
+            Grid.RowSpan="5"
             ResizeDirection="Columns" 
             ResizeBehavior="PreviousAndNext" 
             Width="5"
@@ -186,8 +219,9 @@
         <Button 
             Grid.Row="6" 
             Grid.Column="2" 
-            Grid.ColumnSpan="3"
-            />
+            >
+            <TextBlock Text="PDF"></TextBlock>
+        </Button>
 
         <Grid Row="1" Column="0">
             <Grid.ColumnDefinitions>
@@ -206,8 +240,10 @@
                          Height="24"
                          VerticalContentAlignment="Center"
                          x:Name="Delimiters" 
-                         BorderBrush="#FF0E9500"
+                         BorderBrush="{StaticResource BorderBrush1}"
                          BorderThickness="2"
+                         HorizontalContentAlignment="Center"
+                         Background="#FCFFFAF2"
                          Text="{Binding Delimiters,
                             Mode=TwoWay,
                             UpdateSourceTrigger=LostFocus}"
@@ -217,13 +253,13 @@
                         VerticalAlignment="Stretch" 
                         Command="{Binding Analyze}"
                         Margin="2"
-                        BorderBrush="#FF0E9500"
+                        BorderBrush="{StaticResource BorderBrush1}"
                         BorderThickness="2" 
-                        Background="#B0FFA6"
+                        Background="#FCFFF0D5"
                         VerticalContentAlignment="Center"
                         Height="Auto"
                 >
-                    <Image Source="../Images/updating.png" Height="22" Margin="5"></Image>
+                    <TextBlock Text="🗘" FontSize="25"></TextBlock>
                 </Button>    
             </Grid>
             <ListBox x:Name="FieldsListBox"
@@ -231,7 +267,7 @@
                      Grid.Column="1"
                      Background="Transparent"
                      Margin="2"
-                     BorderBrush="#FF0E9500"
+                     BorderBrush="{StaticResource BorderBrush1}"
                      BorderThickness="2"
                      VerticalAlignment="Stretch"
                      ItemsSource="{Binding Path=FieldResults}"
@@ -290,10 +326,10 @@
                     <RowDefinition/>
                 </Grid.RowDefinitions>
                 <Button Grid.Row="0"
-                        Background="LawnGreen"
+                        Background="#FAE3D239"
                         Margin="2"
                         BorderBrush="{Binding SheetNumSelectingEnabled,
-                                Converter={StaticResource NumSelectingToColorConverter}}"
+                                Converter={StaticResource SelectingToColorConverter}}"
                         BorderThickness="2"
                         AllowDrop="True"
                         Command="{Binding SheetNumSelect}"
@@ -303,10 +339,10 @@
                                FontWeight="Bold"/>
                 </Button>
                 <Button Grid.Row="1"
-                        Background="DodgerBlue"
+                        Background="#DA6571FF"
                         Margin="2"
                         BorderBrush="{Binding RevNumSelectingEnabled,
-                    Converter={StaticResource NumSelectingToColorConverter}}"
+                    Converter={StaticResource SelectingToColorConverter}}"
                         BorderThickness="2"
                         AllowDrop="True"
                         Command="{Binding RevNumSelect}">
@@ -317,18 +353,55 @@
             </Grid>
         </Grid>
         <Grid 
-            x:Name="SettingsGrid" 
+            x:Name="BeyondAlbumListGrid" 
             Grid.Row="1"
             Grid.Column="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto" MinWidth="50"/>
+                <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Button Grid.Column="0"
+                    Grid.Row="0"
+                    Grid.RowSpan="2"
+                    Command="{Binding FillAlbumList}"
+                    Background="#FCFFF0D5"
+                    Margin="2"
+                    BorderBrush="{StaticResource BorderBrush2}"
+                    BorderThickness="2">
+                <TextBlock Text="⮯" FontSize="35"></TextBlock>
+            </Button>
         </Grid>
-        <Button Grid.Column="2" Grid.Row="1"
-                Command="{Binding FillAlbumList}">
-            <TextBlock Text="FillList"></TextBlock>
-        </Button>
+        <ListBox Grid.Row="2" 
+                 Grid.Column="2" 
+                 ItemsSource ="{Binding AlbumDrawings}"
+                 Background="Transparent"
+                 BorderThickness="0"
+                 VerticalAlignment="Stretch"
+                 Margin="2"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal" 
+                               Margin="0"
+                               HorizontalAlignment="Center"
+                               />
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock 
+                        Text="{Binding SheetNum}"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        FontSize="10"
+                        Foreground="{Binding HasNumerationProblem, Converter={StaticResource HasNumProblemsToColorConverter}}">
+                    </TextBlock>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
     </Grid>
 </Window>

@@ -2,8 +2,10 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:RCP_Drawings_Releaser"
-             StartupUri="Views\MainWindow.xaml">
+             StartupUri="Views/MainWindow.xaml">
     <Application.Resources>
-         
+        <SolidColorBrush Color="#000059" x:Key="TextBrush"/>
+        <SolidColorBrush Color="#7F0E9500" x:Key="BorderBrush1"/>
+        <SolidColorBrush Color="#BFFF8052" x:Key="BorderBrush2"/>
     </Application.Resources>
 </Application>

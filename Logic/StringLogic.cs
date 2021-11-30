@@ -6,6 +6,7 @@ using System.Linq;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Xml.Schema;
+using RCP_Drawings_Releaser.ViewModels;
 
 namespace RCP_Drawings_Releaser
 {
@@ -83,12 +84,19 @@ namespace RCP_Drawings_Releaser
         
         public static int GetNumberField(string sheetName, int fieldNumber, Side side)
         {
-            var field = (side == Side.Left)
-                ? sheetName.Split(Delimiters)[fieldNumber]
-                : sheetName.Split(Delimiters).Reverse().ToArray()[fieldNumber];
+            var result = 0;
+            try
+            {
+                var field = (side == Side.Left)
+                    ? sheetName.Split(Delimiters)[fieldNumber]
+                    : sheetName.Split(Delimiters).Reverse().ToArray()[fieldNumber];
+                int.TryParse(Regex.Replace(field, "[^0-9]", ""), out result);
+            }
+            catch (IndexOutOfRangeException)
+            {
+                result = 0;
+            }
 
-            int.TryParse(Regex.Replace(field, "[^0-9]", ""), out var result);
-            
             return result;
         }
         
@@ -141,12 +149,31 @@ namespace RCP_Drawings_Releaser
                 }
             }
         }
+        private static int MinLengthOfMost(List<FileString> fileStrings)
+        {
+            var drawingsQuantity = fileStrings.Count;
+
+            var orderedStrings = fileStrings.OrderBy(f => f.Fields.Length).ToList();
+            
+            for (var index = 0; index < decimal.Floor((decimal) (drawingsQuantity/10.0)); index++)
+            {
+                var fileString = orderedStrings[index];
+                orderedStrings.Remove(fileString);
+            }
+
+            return orderedStrings.Count();
+        }
+
+        private static void ExcludeShortestFileStrings()
+        {
+            throw new NotImplementedException();
+        }
+        
         private static void FillColumnsData(Side side)
         {
             var columns = side == Side.Left ? LeftColumns : RightColumns;
-            for (var index = 0; index < columns.Count; index++)
+            foreach (var column in columns)
             {
-                var column = columns[index];
                 column.IsConst = CheckIfConst(column.Fields);
                 if (column.IsConst)
                 {
@@ -209,9 +236,11 @@ namespace RCP_Drawings_Releaser
             // Checking for revision number set explicitly 
             var revPrefixes = new[] {"rev", "Р"};
             
-            var bothColumnLists = new List<List<FieldColumn>>();
-            bothColumnLists.Add(LeftColumns);
-            bothColumnLists.Add(RightColumns);
+            var bothColumnLists = new List<List<FieldColumn>>
+            {
+                LeftColumns,
+                RightColumns
+            };
 
             foreach (var columns in bothColumnLists)
             {
@@ -224,7 +253,7 @@ namespace RCP_Drawings_Releaser
                     {
                         // Check if revision prefix is set in previous fields:
                         if (revPrefixes.Any(x =>
-                            String.Equals(x, columns[index - 1].ConstValue, StringComparison.CurrentCultureIgnoreCase)))
+                            string.Equals(x, columns[index - 1].ConstValue, StringComparison.CurrentCultureIgnoreCase)))
                         {
                             column.IsRevNum = true;
                             RevNumSide = (columns == LeftColumns ? Side.Left : Side.Right);
@@ -236,7 +265,7 @@ namespace RCP_Drawings_Releaser
                         // Check if revision prefix is set in revision field:
                         if (revPrefixes.Any(x => column.Fields.All(f => f.ToLower().StartsWith(x.ToLower()))))
                         {
-                            bool isReallyRev = false;
+                            var isReallyRev = false;
                             foreach (var prefix in revPrefixes)
                             {
                                 try

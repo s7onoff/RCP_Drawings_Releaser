@@ -248,17 +248,18 @@ namespace RCP_Drawings_Releaser.ViewModels
         }
         
 
-        private ImportedFile TableItemFromFile(string file)
+        private ImportedFile TableItemFromFile(string file, bool isNewDrawing)
         {
-            var drawing = new ImportedFile
+            var itemFromFile = new ImportedFile
             {
                 FullPath = Path.Combine(file),
                 Name = Path.GetFileNameWithoutExtension(file),
-                Extension = Path.GetExtension(file),
-                FullName = Path.GetFileName(file)
+                Extension = Path.GetExtension(file).ToLower(),
+                FullName = Path.GetFileName(file),
+                IsNewDrawing = isNewDrawing
             };
 
-            return drawing;
+            return itemFromFile;
         }
 
         private void TableItemsFromDirectory(string[] files, ref List<ImportedFile> drawingsList)
@@ -267,7 +268,8 @@ namespace RCP_Drawings_Releaser.ViewModels
             {
                 if (File.Exists(item))
                 {
-                    drawingsList.Add(TableItemFromFile(item));
+                    bool isNewDrawing = (drawingsList == NewDrawings);
+                    drawingsList.Add(TableItemFromFile(item, isNewDrawing));
                 }
                 else if (Directory.Exists(item))
                 {
@@ -300,7 +302,7 @@ namespace RCP_Drawings_Releaser.ViewModels
             Side sheetSide = Side.Left;
             int revPosition = 0;
             Side revSide = Side.Left;
-
+            
             foreach (var fieldResult in FieldResults)
             {
                 if (fieldResult.IsSheetNum)
@@ -329,12 +331,12 @@ namespace RCP_Drawings_Releaser.ViewModels
             
             AlbumDrawings.Clear();
 
-            foreach (var drawing in NewDrawings.Where(drawing => drawing.Extension == ".pdf" || drawing.Extension == ".docx"))
+            foreach (var drawing in NewDrawings.Where(d => d.Extension == ".pdf" || d.Extension == ".docx" ||  d.Extension == ".doc" ||  d.Extension == ".rtf" ))
             {
                 AlbumDrawings.Add(drawing);
             }
 
-            foreach (var oldDrawing in OldDrawings.Where(d => d.Extension == ".pdf" || d.Extension == ".docx"))
+            foreach (var oldDrawing in OldDrawings.Where(d => d.Extension == ".pdf" || d.Extension == ".docx" ||  d.Extension == ".doc" ||  d.Extension == ".rtf"))
             {
                 if (AlbumDrawings.Any(albumDrawing => albumDrawing.SheetNum == oldDrawing.SheetNum &&
                                                       albumDrawing.Extension == oldDrawing.Extension &&
@@ -362,8 +364,15 @@ namespace RCP_Drawings_Releaser.ViewModels
 
             var orderedDrawings = AlbumDrawings.OrderBy(x => x.SheetNum).ToList();
             AlbumDrawings.Clear();
-            foreach (var drawing in orderedDrawings)
+            for (var index = 0; index < orderedDrawings.Count; index++)
             {
+                var drawing = orderedDrawings[index];
+                if(index>0)
+                    if (drawing.SheetNum - orderedDrawings[index-1].SheetNum>1)
+                    {
+                        drawing.HasNumerationProblem = true;
+                        orderedDrawings[index - 1].HasNumerationProblem = true;
+                    }
                 AlbumDrawings.Add(drawing);
             }
         }
@@ -440,6 +449,9 @@ namespace RCP_Drawings_Releaser.ViewModels
             public int SheetNum { get; set; }
             public int RevNum { get; set; }
 
+            public bool IsNewDrawing { get; set; }
+            public bool HasNumerationProblem { get; set; }
+            
             #endregion
 
             #region INotify

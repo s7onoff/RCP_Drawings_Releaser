@@ -65,5 +65,10 @@ namespace RCP_Drawings_Releaser.Views
             vm.SheetNumSelectingEnabled = false;
             vm.RevNumSelectingEnabled = false;
         }
+
+        private void TopPanel_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            this.DragMove();
+        }
     }
 }

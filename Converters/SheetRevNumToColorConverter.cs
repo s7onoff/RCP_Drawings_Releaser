@@ -7,16 +7,6 @@ namespace RCP_Drawings_Releaser.Converters
 {
     public class SheetRevNumToColorConverter : IMultiValueConverter
     {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            return value != null && (bool) value ? new SolidColorBrush(Colors.DarkBlue) : new SolidColorBrush(Colors.SlateGray);
-        }
-
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            throw new NotImplementedException();
-        }
-
         public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
         {
             var sheetNum = (bool)values[0];
@@ -28,7 +18,7 @@ namespace RCP_Drawings_Releaser.Converters
             {
                 case true when revNum == false:
                 {
-                    color = Colors.LawnGreen;
+                    color = (Color)ColorConverter.ConvertFromString("#FAE3D239");
                     break;
                 }
                 case true when revNum == true:
@@ -38,12 +28,12 @@ namespace RCP_Drawings_Releaser.Converters
                 }
                 case false when revNum == false:
                 {
-                    color = Colors.LightGray;
+                    color = (Color)ColorConverter.ConvertFromString("#FACAE4DF");
                     break;
                 }
                 case false when revNum == true:
                 {
-                    color = Colors.DodgerBlue;
+                    color = (Color)ColorConverter.ConvertFromString("#DA6571FF");
                     break;
                 }
             }
