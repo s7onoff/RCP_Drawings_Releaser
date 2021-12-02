@@ -9,5 +9,7 @@
 //------------------------------------------------------------------------------
 
 [assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("images/updating.png")]
+[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("license.txt")]
+[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("windows%20logo.png")]
 
 

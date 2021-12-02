@@ -66,13 +66,16 @@ namespace RCP_Drawings_Releaser
             if (fileNames.Count == 0) return ResultColumns;
             FlushData();
             CreateFieldsFromFileNames(fileNames);
-            CreateFieldColumns(Side.Left);
-            FillColumnsData(Side.Left);
-            CreateFieldColumns(Side.Right);
-            FillColumnsData(Side.Right);
-            FindSheetNumber();
-            FindRev();
-            PrepareResults();
+            if (PdfsAndDwgs.Count > 0)
+            {
+                CreateFieldColumns(Side.Left);
+                FillColumnsData(Side.Left);
+                CreateFieldColumns(Side.Right);
+                FillColumnsData(Side.Right);
+                FindSheetNumber();
+                FindRev();
+                PrepareResults();
+            }
             return ResultColumns;
         }
 
@@ -130,6 +133,7 @@ namespace RCP_Drawings_Releaser
         
         private static void CreateFieldColumns(Side side)
         {
+            if(PdfsAndDwgs.Count<=0) return;
             var minLength = PdfsAndDwgs.Select(fileString => fileString.Fields.Length).Min();
 
             var columns = ((side == Side.Left) ? LeftColumns : RightColumns);

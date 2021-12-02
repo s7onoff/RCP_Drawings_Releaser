@@ -5,7 +5,10 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
+using Microsoft.WindowsAPICodePack.Dialogs;
 using RCP_Drawings_Releaser.Annotations;
 
 
@@ -60,39 +63,7 @@ namespace RCP_Drawings_Releaser.ViewModels
 
             public override void Execute(object parameter)
             {
-                VM.FieldResults.Clear();
-                var results = new List<StringLogic.FieldColumn>(StringLogic.AnalyzeData(
-                        VM.NewDrawings.Select(file => file.FullName).ToList().
-                            Concat(VM.OldDrawings.Select(file => file.FullName).ToList()).
-                            ToList())
-                        );
-                for (var index = 0; index < results.Count; index++)
-                {
-                    var column = results[index];
-                    var thisFieldResult = new ResultField();
-
-                    if (index > 0 && column.ColumnSide == Side.Right && results[index - 1].ColumnSide == Side.Left)
-                    {
-                        VM.FieldResults.Add(new ResultField()
-                        {
-                            Value = "<....>"
-                        });
-                    }
-                    
-                    if (column.IsConst)
-                    {
-                        thisFieldResult.Value = column.ConstValue;
-                    }
-
-                    thisFieldResult.IsSheetNum = column.IsSheetNum;
-                    thisFieldResult.IsRevNum = column.IsRevNum;
-                    thisFieldResult.AllValues = column.Fields.ToArray();
-                    thisFieldResult.ResultSide = column.ColumnSide;
-                    thisFieldResult.Num = column.Num;
-                    thisFieldResult.NumFromRight = column.NumFromRight;
-
-                    VM.FieldResults.Add(thisFieldResult);
-                }
+                VM.FillFieldResults();
             }
         }
 
@@ -141,7 +112,82 @@ namespace RCP_Drawings_Releaser.ViewModels
                 VM.FillAlbumDrawings();
             }
         }
+        public class CloseAppCommand : ButtonCommand
+        {
+            public CloseAppCommand(MainWindowVM vm) : base(vm) { }
+
+            public override void Execute(object parameter)
+            {
+                Application.Current.Shutdown();
+            }
+        }
+
+        public class SelectSavingFolderCommand : ButtonCommand
+        {
+            public SelectSavingFolderCommand(MainWindowVM vm) : base(vm) { }
+
+            public override void Execute(object parameter)
+            {
+                var dlg = new CommonOpenFileDialog();
+                dlg.Title = "Folder to save drawings";
+                dlg.IsFolderPicker = true;
+                
+                try
+                {
+                    dlg.InitialDirectory = Path.Combine(VM.PathToSave);
+                }
+                catch (ArgumentException)
+                {
+                    dlg.InitialDirectory = VM.NewFiles.Count == 0 ? 
+                        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) : 
+                        Path.Combine(VM.NewFiles[0].FullPath);
+                }
+                
+                dlg.AddToMostRecentlyUsedList = false;
+                dlg.AllowNonFileSystemItems = false;
+                dlg.DefaultDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                dlg.EnsureFileExists = true;
+                dlg.EnsurePathExists = true;
+                dlg.EnsureReadOnly = false;
+                dlg.EnsureValidNames = true;
+                dlg.Multiselect = false;
+                dlg.ShowPlacesList = true;
+
+                if (dlg.ShowDialog() == CommonFileDialogResult.Ok)
+                {
+                    VM.PathToSave = dlg.FileName;
+                }
+            }
+        }
+
+        public class CreateAlbumPdfCommand : ButtonCommand
+        {
+            public CreateAlbumPdfCommand(MainWindowVM vm) : base(vm) { }
+
+            public override void Execute(object parameter)
+            {
+                PDFLogic.MergeFiles(VM.AlbumDrawings.Select(f => 
+                    f.FullPath.ToString()).ToList(), VM.PathToSave, string.Concat(VM.PdfName, ".pdf"));
+            }
+        }
+        
+        public class FilesToFoldersCommand : ButtonCommand
+        {
+            public FilesToFoldersCommand(MainWindowVM vm) : base(vm) { }
+
+            public override void Execute(object parameter)
+            {
+                if (VM.PathToSaveAuto)
+                {
+                    VM.SelectSavingFolder.Execute(null);
+                }
+                VM.CreateFolderStructure();
+            }
+        }
+        
         #endregion
+
+
 
         #region Props
         
@@ -176,10 +222,19 @@ namespace RCP_Drawings_Releaser.ViewModels
             }
         }
 
+        public List<string> DrawingExtensions;
+
+        private bool RevisionsExist { get; set; }
+        private bool PathToSaveAuto { get; set; }
         public AnalyzeCommand Analyze { get; }
         public SheetNumSelectCommand SheetNumSelect { get; }
         public RevNumSelectCommand RevNumSelect { get;  }
         public FillAlbumListCommand FillAlbumList { get; }
+        public CloseAppCommand CloseApp { get; }
+        public SelectSavingFolderCommand SelectSavingFolder { get; }
+        
+        public CreateAlbumPdfCommand CreateAlbumPdf { get; }
+        public FilesToFoldersCommand FilesToFolders { get; }
         
         public BindingList<ResultField> FieldResults
         {
@@ -191,24 +246,24 @@ namespace RCP_Drawings_Releaser.ViewModels
             }
         }
 
-        public List<ImportedFile> NewDrawings
+        public List<ImportedFile> NewFiles
         {
-            get => _newDrawings;
+            get => _newFiles;
             set
             {
-                _newDrawings = value;
-                OnPropertyChanged(nameof(NewDrawings));
+                _newFiles = value;
+                OnPropertyChanged(nameof(NewFiles));
             }
         }
 
 
-        public List<ImportedFile> OldDrawings
+        public List<ImportedFile> OldFiles
         {
-            get => _oldDrawings;
+            get => _oldFiles;
             set
             {
-                _oldDrawings = value;
-                OnPropertyChanged(nameof(OldDrawings));
+                _oldFiles = value;
+                OnPropertyChanged(nameof(OldFiles));
             }
         }
 
@@ -222,13 +277,36 @@ namespace RCP_Drawings_Releaser.ViewModels
             }
         }
 
+        public string PathToSave
+        {
+            get => _pathToSave;
+            set
+            {
+                _pathToSave = value; 
+                OnPropertyChanged(nameof(PathToSave));
+                PathToSaveAuto = false;
+            }
+        }
+
+        public string PdfName
+        {
+            get => _pdfName;
+            set
+            {
+                _pdfName = value; 
+                OnPropertyChanged(nameof(PdfName));
+            }
+        }
+
         private bool _sheetNumSelectingEnabled;
         private bool _revNumSelectingEnabled;
         private string _delimiters;
         private BindingList<ResultField> _fieldResults;
-        private List<ImportedFile> _newDrawings;
-        private List<ImportedFile> _oldDrawings;
+        private List<ImportedFile> _newFiles;
+        private List<ImportedFile> _oldFiles;
         private ObservableCollection<ImportedFile> _albumDrawings;
+        private string _pdfName;
+        private string _pathToSave;
 
         #endregion
 
@@ -238,8 +316,8 @@ namespace RCP_Drawings_Releaser.ViewModels
         {
             var tableChooser = new Dictionary<string, List<ImportedFile>>()
             {
-                {"NewDrawingsGrid", NewDrawings },
-                {"OldDrawingsGrid", OldDrawings }
+                {"NewDrawingsGrid", NewFiles },
+                {"OldDrawingsGrid", OldFiles }
             };
 
             var chosenTable = tableChooser[tableName];
@@ -268,7 +346,7 @@ namespace RCP_Drawings_Releaser.ViewModels
             {
                 if (File.Exists(item))
                 {
-                    bool isNewDrawing = (drawingsList == NewDrawings);
+                    bool isNewDrawing = (drawingsList == NewFiles);
                     drawingsList.Add(TableItemFromFile(item, isNewDrawing));
                 }
                 else if (Directory.Exists(item))
@@ -307,13 +385,13 @@ namespace RCP_Drawings_Releaser.ViewModels
             {
                 if (fieldResult.IsSheetNum)
                 {
-                    sheetPosition = (fieldResult.ResultSide == Side.Left) ? fieldResult.Num : fieldResult.NumFromRight;
-                    sheetSide = fieldResult.ResultSide;
+                    sheetPosition = (fieldResult.FieldSide == Side.Left) ? fieldResult.Num : fieldResult.NumFromRight;
+                    sheetSide = fieldResult.FieldSide;
                 }
                 else if(fieldResult.IsRevNum)
                 {
-                    revPosition = (fieldResult.ResultSide == Side.Left) ? fieldResult.Num : fieldResult.NumFromRight;
-                    revSide = fieldResult.ResultSide;
+                    revPosition = (fieldResult.FieldSide == Side.Left) ? fieldResult.Num : fieldResult.NumFromRight;
+                    revSide = fieldResult.FieldSide;
                 }
             }
             
@@ -326,33 +404,50 @@ namespace RCP_Drawings_Releaser.ViewModels
 
         private void FillAlbumDrawings()
         {
-            SetDrawingsSheetsAndRevs(NewDrawings);
-            SetDrawingsSheetsAndRevs(OldDrawings);
+            SetDrawingsSheetsAndRevs(NewFiles);
+            SetDrawingsSheetsAndRevs(OldFiles);
             
             AlbumDrawings.Clear();
+            
 
-            foreach (var drawing in NewDrawings.Where(d => d.Extension == ".pdf" || d.Extension == ".docx" ||  d.Extension == ".doc" ||  d.Extension == ".rtf" ))
+            //Adding every New Drawing
+            foreach (var drawing in NewFiles.Where(d => DrawingExtensions.Any(de=>de.Equals(d.Extension.ToLower()))))
             {
                 AlbumDrawings.Add(drawing);
             }
 
-            foreach (var oldDrawing in OldDrawings.Where(d => d.Extension == ".pdf" || d.Extension == ".docx" ||  d.Extension == ".doc" ||  d.Extension == ".rtf"))
+            foreach (var oldDrawing in OldFiles.Where(d => DrawingExtensions.Any(de=>de.Equals(d.Extension.ToLower()))))
             {
+                // Finding all OldDrawings with revision bigger (newer) than existing in table
                 if (AlbumDrawings.Any(albumDrawing => albumDrawing.SheetNum == oldDrawing.SheetNum &&
                                                       albumDrawing.Extension == oldDrawing.Extension &&
                                                       albumDrawing.RevNum < oldDrawing.RevNum))
                 {
-                    // Вах какой костыль блять
+                    // tempList is needed because BindingList cannot use Find()
                     var tempList = AlbumDrawings.ToList();
-                    AlbumDrawings.Remove(tempList
-                        .Find(albumDrawing =>
-                            albumDrawing.SheetNum == oldDrawing.SheetNum &&
-                            albumDrawing.Extension == oldDrawing.Extension &&
-                            albumDrawing.RevNum < oldDrawing.RevNum));
+                    
+                    var removedDrawing = tempList.Find(albumDrawing =>
+                        albumDrawing.SheetNum == oldDrawing.SheetNum &&
+                        albumDrawing.Extension == oldDrawing.Extension &&
+                        albumDrawing.RevNum < oldDrawing.RevNum);
+
+                    if (
+                            removedDrawing.SheetNum == 0 &&
+                            (
+                                removedDrawing.Name.ToLower().Contains("cover") && oldDrawing.Name.ToLower().Contains("title") 
+                                ||
+                                removedDrawing.Name.ToLower().Contains("title") && oldDrawing.Name.ToLower().Contains("cover")
+                            )
+                        )
+                        continue;
+                    
+                    AlbumDrawings.Remove(removedDrawing);
+                    removedDrawing.WillNotGoToFolders = true;
                     AlbumDrawings.Add(oldDrawing);
                     continue;
                 }
-
+                
+                // Finding all OldDrawings not being presented in Album before:
                 if (AlbumDrawings.All(albumDrawing => 
                     (albumDrawing.SheetNum != oldDrawing.SheetNum) || 
                     (albumDrawing.SheetNum == oldDrawing.SheetNum &&
@@ -362,6 +457,16 @@ namespace RCP_Drawings_Releaser.ViewModels
                 }
             }
 
+            var dwgsToRemove = new List<ImportedFile>(AlbumDrawings.Where(ad => ad.Extension.Equals(".dwg")));
+            foreach (var file in dwgsToRemove)
+            {
+                // Dwgs will go to folders, but not to Album PDF
+                AlbumDrawings.Remove(file);
+            }
+            
+            
+
+            // Ordering drawings. New List is needed because BindingList cannot be OrderedBy
             var orderedDrawings = AlbumDrawings.OrderBy(x => x.SheetNum).ToList();
             AlbumDrawings.Clear();
             for (var index = 0; index < orderedDrawings.Count; index++)
@@ -370,11 +475,118 @@ namespace RCP_Drawings_Releaser.ViewModels
                 if(index>0)
                     if (drawing.SheetNum - orderedDrawings[index-1].SheetNum>1)
                     {
+                        // Finding if some drawings were missed
+                        // E.g.: sheets 1,2,3,5 - missing 4. 3 and 5 will be shown with red color
                         drawing.HasNumerationProblem = true;
                         orderedDrawings[index - 1].HasNumerationProblem = true;
                     }
                 AlbumDrawings.Add(drawing);
             }
+
+            if (AlbumDrawings.Count > 0)
+            {
+                PathToSave = Path.GetDirectoryName(AlbumDrawings[0].FullPath);
+                PathToSaveAuto = true;
+                try
+                {
+                    PdfName = GetPdfName(AlbumDrawings[0]);
+                }
+                catch
+                {
+                    // ignored
+                }
+            }
+        }
+
+        private string GetPdfName(ImportedFile importedFile)
+        {
+            var thisFileFields = importedFile.Name.Split(string.Concat(Delimiters," ").ToCharArray());
+
+            var thisFileResultFields = FieldResults.Where(f=> !f.IsRevNum && !f.IsSheetNum && f.FieldSide==Side.Left && f.IsConst).Select(fieldResult =>
+                thisFileFields[fieldResult.Num]).ToList();
+
+            var resultWithoutRevision = string.Join("-", thisFileResultFields.ToArray());
+            var resultWithRevision =
+                string.Concat(string.Concat(resultWithoutRevision, "-rev."), importedFile.RevNum);
+            
+            return RevisionsExist ? resultWithRevision : resultWithoutRevision;
+        }
+
+        private void FillFieldResults()
+        {
+            FieldResults.Clear();
+            var results = new List<StringLogic.FieldColumn>(StringLogic.AnalyzeData(
+                NewFiles.Select(file => file.FullName).ToList().
+                    Concat(OldFiles.Select(file => file.FullName).ToList()).
+                    ToList())
+            );
+            for (var index = 0; index < results.Count; index++)
+            {
+                var column = results[index];
+                var thisFieldResult = new ResultField();
+
+                if (index > 0 && column.ColumnSide == Side.Right && results[index - 1].ColumnSide == Side.Left)
+                {
+                    FieldResults.Add(new ResultField()
+                    {
+                        Value = "<....>"
+                    });
+                }
+                    
+                if (column.IsConst)
+                {
+                    thisFieldResult.Value = column.ConstValue;
+                    thisFieldResult.IsConst = true;
+                }
+
+                thisFieldResult.IsSheetNum = column.IsSheetNum;
+                thisFieldResult.IsRevNum = column.IsRevNum;
+                thisFieldResult.AllValues = column.Fields.ToArray();
+                thisFieldResult.FieldSide = column.ColumnSide;
+                thisFieldResult.Num = column.Num;
+                thisFieldResult.NumFromRight = column.NumFromRight;
+
+                FieldResults.Add(thisFieldResult);
+            }
+
+            RevisionsExist = FieldResults.Any(f => f.IsRevNum);
+        }
+
+        private void CreateFolderStructure()
+        {
+            var dirPath = PathToSave;
+            
+            var newExtensions = NewFiles.ToList().Select(file => 
+                file.Extension.Replace(".", "").ToUpper()).ToList();
+            var oldExtensions = OldFiles.ToList().Select(file => 
+                file.Extension.Replace(".", "").ToUpper()).ToList();
+
+            foreach (var extension in newExtensions.Concat(oldExtensions))
+            {
+                Directory.CreateDirectory(Path.Combine(dirPath, extension));
+                if (oldExtensions.Contains(extension))
+                {
+                    Directory.CreateDirectory(Path.Combine(Path.Combine(dirPath, extension), "Unchanged"));
+                }
+            }
+
+            
+            foreach (var file in NewFiles.Where(f => !f.WillNotGoToFolders || !DrawingExtensions.Any(de => f.Extension.Equals(de))))
+            {
+                var destinationFolder = Path.Combine(dirPath, file.Extension.Replace(".","").ToUpper());
+                var fileName = string.Concat(file.Name, file.Extension);
+                if(!File.Exists(Path.Combine(destinationFolder, fileName)))
+                    File.Copy(file.FullPath, Path.Combine(destinationFolder, fileName));
+            }
+            
+            foreach (var file in OldFiles.Where(f => !f.WillNotGoToFolders || !DrawingExtensions.Any(de => f.Extension.Equals(de))))
+            {
+                var destinationFolder = Path.Combine(Path.Combine(dirPath, file.Extension.Replace(".","").ToUpper()), "Unchanged");
+                var fileName = string.Concat(file.Name, file.Extension);
+                if(!File.Exists(Path.Combine(destinationFolder, fileName)))
+                    File.Copy(file.FullPath, Path.Combine(destinationFolder, fileName));
+            }
+
         }
 
         #endregion Methods
@@ -383,12 +595,12 @@ namespace RCP_Drawings_Releaser.ViewModels
 
         public class ResultField
         {
-            
             public string Value { get; set; }
             public bool IsSheetNum { get; set; }
             public bool IsRevNum { get; set; }
+            public bool IsConst { get; set; }
             public string[] AllValues { get; set; }
-            public Side ResultSide { get; set; }
+            public Side FieldSide { get; set; }
             public int Num { get; set; }
             public int NumFromRight { get; set; }
 
@@ -397,8 +609,9 @@ namespace RCP_Drawings_Releaser.ViewModels
                 Value = "xx";
                 IsRevNum = false;
                 IsSheetNum = false;
+                IsConst = false;
                 AllValues = new string[]{};
-                ResultSide = Side.Left;
+                FieldSide = Side.Left;
                 Num = 0;
                 NumFromRight = 0;
             }
@@ -452,6 +665,7 @@ namespace RCP_Drawings_Releaser.ViewModels
             public bool IsNewDrawing { get; set; }
             public bool HasNumerationProblem { get; set; }
             
+            public bool WillNotGoToFolders { get; set; }
             #endregion
 
             #region INotify
@@ -473,9 +687,19 @@ namespace RCP_Drawings_Releaser.ViewModels
         {
             RevNumSelectingEnabled = false;
             SheetNumSelectingEnabled = false;
+            RevisionsExist = false;
+            PathToSaveAuto = true;
+            
             Delimiters = ".-_[]";
-            NewDrawings = new List<ImportedFile>();
-            OldDrawings = new List<ImportedFile>();
+            DrawingExtensions = new List<string>
+            {
+                ".pdf", ".dwg", ".doc", ".docx", ".rft"
+            };
+            PathToSave = "";
+            PdfName = "";
+
+            NewFiles = new List<ImportedFile>();
+            OldFiles = new List<ImportedFile>();
             FieldResults = new BindingList<ResultField>();
             AlbumDrawings = new ObservableCollection<ImportedFile>();
             
@@ -483,6 +707,11 @@ namespace RCP_Drawings_Releaser.ViewModels
             SheetNumSelect = new SheetNumSelectCommand(this);
             RevNumSelect = new RevNumSelectCommand(this);
             FillAlbumList = new FillAlbumListCommand(this);
+            CloseApp = new CloseAppCommand(this);
+            SelectSavingFolder = new SelectSavingFolderCommand(this);
+            CreateAlbumPdf = new CreateAlbumPdfCommand(this);
+            FilesToFolders = new FilesToFoldersCommand(this);
+            
         }
 
         #endregion

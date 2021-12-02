@@ -6,7 +6,9 @@
         xmlns:converters = "clr-namespace:RCP_Drawings_Releaser.Converters"
         xmlns:viewmodels="clr-namespace:RCP_Drawings_Releaser.ViewModels"
         mc:Ignorable="d"
-        Title="RCP Drawings Releaser v0.1b" Height="650" Width="900"
+        Title="RCP Drawings Releaser v0.1b" 
+        Height="650" Width="750"
+        MinHeight="450" MinWidth="600"
         AllowsTransparency="True" 
         Background="Transparent" WindowStyle="None"
         ResizeMode="CanResizeWithGrip">
@@ -76,7 +78,11 @@
         <converters:NewDrawingToColorConverter x:Key="NewDrawingToColorConverter"/>
         <converters:HasNumProblemsToColorConverter x:Key="HasNumProblemsToColorConverter"/>
     </Window.Resources>
-    <Grid x:Name="MainGrid" DataContext="{StaticResource MainVm}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
         <Grid.Background>
             <LinearGradientBrush StartPoint="0.53,0" EndPoint="0.2,1" >
                 <GradientStop Color="#F277D977" Offset="0"/>
@@ -86,34 +92,58 @@
                 <GradientStop Color="#F277D9D9" Offset="1"/>
             </LinearGradientBrush>
         </Grid.Background>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="30"/>
+        <Grid x:Name="TopPanel"
+              Grid.Row="0"
+              DataContext="{StaticResource MainVm}"
+              VerticalAlignment="Top"
+              Height="25"
+              MouseLeftButtonDown="TopPanel_OnMouseLeftButtonDown">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="25"/>
+            </Grid.ColumnDefinitions>
+            <Rectangle Grid.Column="0"
+                       Grid.ColumnSpan="2"
+                       Fill="#FCFFFFFF"
+                       StrokeThickness="1"
+                       Stroke="DarkBlue"
+                       Stretch="Fill"></Rectangle>
+            <TextBlock Grid.Column="0"
+                       HorizontalAlignment="Left"
+                       VerticalAlignment="Center"
+                       Text="Renaissance Construction Project Drawing Releaser v0.1"
+                       Margin="10,0,0,0"></TextBlock>
+            <Button Grid.Column="1" 
+                    Height="Auto" 
+                    Margin="2"
+                    Background="White"
+                    BorderBrush="DarkBlue"
+                    Command="{Binding CloseApp }"
+            >
+                <TextBlock Text="❌" 
+                           Foreground="DarkBlue" 
+                           FontSize="12" 
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Center"
+                           TextAlignment="Center"></TextBlock>
+            </Button>
+        </Grid>
+        <Grid Grid.Row="1" x:Name="MainGrid" 
+              DataContext="{StaticResource MainVm}"
+              Margin="7,0,7,7">
+            <Grid.RowDefinitions>
+            <RowDefinition Height="0"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto" MinHeight="21"/>
             <RowDefinition Height="8*"/>
             <RowDefinition Height="21"/>
-            <RowDefinition Height="7*"/>
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="8*"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="8*"/>
+            <ColumnDefinition Width="2*"/>
             <ColumnDefinition Width="5"/>
-            <ColumnDefinition Width="8*"/>
-            <ColumnDefinition Width="5"/>
-            <ColumnDefinition Width="4*"/>
+            <ColumnDefinition Width="3*"/>
         </Grid.ColumnDefinitions>
-        
-        <Rectangle Grid.Column="0"
-                   Grid.ColumnSpan="5"
-                   Grid.Row="0" 
-                   Height="25"
-                   Fill="White"
-                   Stroke="Blue"
-                   StrokeThickness="1"
-                   Margin="0"
-                   VerticalAlignment="Top"
-                   MouseLeftButtonDown="TopPanel_OnMouseLeftButtonDown"/>
-                   
         
         <TextBlock Text="New"
                    Grid.Column="0"
@@ -128,7 +158,7 @@
                   Grid.Row="3"
                   Grid.Column="0"
                   DragDrop.Drop="drawings_Drop"
-                  ItemsSource="{Binding NewDrawings}" 
+                  ItemsSource="{Binding NewFiles}" 
                   Background="#7FB5FFB0" 
                   BorderBrush="{StaticResource BorderBrush1}"
                   BorderThickness="2"
@@ -158,10 +188,9 @@
         <DataGrid x:Name="OldDrawingsGrid"
                   Style="{StaticResource DrawingsTable}"
                   Grid.Row="5" 
-                  Grid.RowSpan="2"
                   Grid.Column="0" 
                   DragDrop.Drop="drawings_Drop"
-                  ItemsSource="{Binding OldDrawings}" 
+                  ItemsSource="{Binding OldFiles}" 
                   Background="#7FA6F2FF" 
                   BorderBrush="{StaticResource BorderBrush1}"
                   BorderThickness="2">
@@ -182,7 +211,7 @@
         <GridSplitter 
             Grid.Column="1" 
             Grid.Row="1"
-            Grid.RowSpan="6"
+            Grid.RowSpan="5"
             ResizeDirection="Columns" 
             ResizeBehavior="PreviousAndNext" 
             Width="5"
@@ -207,22 +236,6 @@
             </ListView.ItemTemplate>
         </ListView>
         
-        <GridSplitter 
-            Grid.Column="3" 
-            Grid.Row="1"
-            Grid.RowSpan="5"
-            ResizeDirection="Columns" 
-            ResizeBehavior="PreviousAndNext" 
-            Width="5"
-            Background="Transparent"/>
-
-        <Button 
-            Grid.Row="6" 
-            Grid.Column="2" 
-            >
-            <TextBlock Text="PDF"></TextBlock>
-        </Button>
-
         <Grid Row="1" Column="0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
@@ -232,7 +245,7 @@
             <Grid Grid.Column="0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 <TextBox Grid.Column="0" 
                          Grid.Row="0"
@@ -257,9 +270,9 @@
                         BorderThickness="2" 
                         Background="#FCFFF0D5"
                         VerticalContentAlignment="Center"
-                        Height="Auto"
                 >
-                    <TextBlock Text="🗘" FontSize="25"></TextBlock>
+                    <TextBlock Text="🗘" 
+                               FontSize="25"/>
                 </Button>    
             </Grid>
             <ListBox x:Name="FieldsListBox"
@@ -335,7 +348,6 @@
                         Command="{Binding SheetNumSelect}"
                 >
                     <TextBlock Text="Sheet"
-                               Foreground="DarkGreen"
                                FontWeight="Bold"/>
                 </Button>
                 <Button Grid.Row="1"
@@ -352,6 +364,9 @@
                 </Button>    
             </Grid>
         </Grid>
+        
+        
+        
         <Grid 
             x:Name="BeyondAlbumListGrid" 
             Grid.Row="1"
@@ -359,14 +374,18 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" MinWidth="50"/>
                 <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto" MinWidth="50"/>
+                <ColumnDefinition Width="Auto" MinWidth="50"/>
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="*"/>
+                <RowDefinition Height="30"/>
+                <RowDefinition Height="30"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
+            
             <Button Grid.Column="0"
                     Grid.Row="0"
-                    Grid.RowSpan="2"
+                    Grid.RowSpan="3"
                     Command="{Binding FillAlbumList}"
                     Background="#FCFFF0D5"
                     Margin="2"
@@ -374,34 +393,107 @@
                     BorderThickness="2">
                 <TextBlock Text="⮯" FontSize="35"></TextBlock>
             </Button>
+            
+            <Grid
+                Grid.Row="0" 
+                Grid.Column="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBox Grid.Column="0"
+                         Margin="2"
+                         Height="24"
+                         VerticalContentAlignment="Center"
+                         x:Name="PathToFolder" 
+                         BorderBrush="{StaticResource BorderBrush2}"
+                         BorderThickness="2"
+                         HorizontalContentAlignment="Left"
+                         Background="#FCFFFAF2"
+                         Text="{Binding PathToSave, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                         />
+                <Button Grid.Column="1"
+                        Background="#FCFFF0D5"
+                        Margin="2"
+                        BorderBrush="{StaticResource BorderBrush2}"
+                        BorderThickness="2"
+                        Command="{Binding SelectSavingFolder}">
+                    <TextBlock Text="..." Margin="10,0,10,0"/>
+                </Button>
+            </Grid>
+            
+            <TextBox Grid.Row="1"
+                     Grid.Column="1"
+                     Margin="2"
+                     Height="24"
+                     VerticalContentAlignment="Center"
+                     x:Name="PdfName" 
+                     BorderBrush="{StaticResource BorderBrush2}"
+                     BorderThickness="2"
+                     HorizontalContentAlignment="Left"
+                     Background="#FCFFFAF2"
+                     Text="{Binding PdfName, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                     />
+            
+            <ListBox Grid.Row="2" 
+                     Grid.Column="1" 
+                     ItemsSource ="{Binding AlbumDrawings}"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     VerticalAlignment="Stretch"
+                     Margin="2"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal" 
+                                   Margin="0"
+                                   HorizontalAlignment="Center"
+                        />
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock 
+                            Text="{Binding SheetNum}"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            FontSize="10"
+                            Foreground="{Binding HasNumerationProblem, Converter={StaticResource HasNumProblemsToColorConverter}}">
+                        </TextBlock>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            
+            <Button Grid.Row="0" 
+                    Grid.RowSpan="3"
+                    Grid.Column="2"
+                    Background="#FCFFF0D5"
+                    Margin="2"
+                    BorderBrush="{StaticResource BorderBrush2}"
+                    BorderThickness="2"
+                    Command="{Binding CreateAlbumPdf}"
+            >
+                <StackPanel Orientation="Vertical">
+                    <TextBlock Text="PDF" FontSize="14" FontWeight="Bold" VerticalAlignment="Top"/>
+                    <TextBlock Text="⮭" FontSize="30" VerticalAlignment="Center" Margin="0,-7,0,0"/>
+                </StackPanel>
+            </Button>
+            
+            <Button Grid.Row="0" 
+                    Grid.RowSpan="3"
+                    Grid.Column="3"
+                    Background="#FCFFF0D5"
+                    Margin="2"
+                    BorderBrush="{StaticResource BorderBrush2}"
+                    BorderThickness="2"
+                    Command="{Binding FilesToFolders}">
+                <StackPanel Orientation="Vertical">
+                    <TextBlock Text="📂" FontSize="25" FontWeight="Bold" VerticalAlignment="Top" Margin="0,-15,0,0"/>
+                    <TextBlock Text="🠹" FontSize="35" VerticalAlignment="Center" Margin="0,-12,0,-20"/>
+                </StackPanel>
+            </Button>
         </Grid>
-        <ListBox Grid.Row="2" 
-                 Grid.Column="2" 
-                 ItemsSource ="{Binding AlbumDrawings}"
-                 Background="Transparent"
-                 BorderThickness="0"
-                 VerticalAlignment="Stretch"
-                 Margin="2"
-                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-            <ListBox.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <WrapPanel Orientation="Horizontal" 
-                               Margin="0"
-                               HorizontalAlignment="Center"
-                               />
-                </ItemsPanelTemplate>
-            </ListBox.ItemsPanel>
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <TextBlock 
-                        Text="{Binding SheetNum}"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Center"
-                        FontSize="10"
-                        Foreground="{Binding HasNumerationProblem, Converter={StaticResource HasNumProblemsToColorConverter}}">
-                    </TextBlock>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
+    </Grid>
+        
     </Grid>
 </Window>
